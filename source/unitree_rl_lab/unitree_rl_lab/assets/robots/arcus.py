@@ -7,7 +7,7 @@ from unitree_rl_lab.assets.robots.unitree import UnitreeUsdFileCfg, UnitreeUrdfF
 
 ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path=f"~/UniTree/gym/robots/a1/Arcus_23dof.urdf",
+        asset_path=f"robots/a1/Arcus_23dof.urdf",
     ),
     # spawn=UnitreeUsdFileCfg(
     #     usd_path=f"{UNITREE_MODEL_DIR}/a1_23dof/a1_23dof.usd",
@@ -106,16 +106,16 @@ ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
 
 
 LEG_JOINT_NAMES = [
-                ".*_hip_yaw_joint",
-                ".*_hip_roll_joint",
-                ".*_hip_pitch_joint",
-                ".*_knee_joint",
-                ".*waist.*",
+                # ".*_hip_yaw_joint",
+                # ".*_hip_roll_joint",
+                # ".*_hip_pitch_joint",
+                # ".*_knee_joint",
+                # ".*waist.*",
                 ".*_ankle_pitch_joint",
-                ".*_ankle_roll_joint",
-                ".*_shoulder_pitch_joint",
-                ".*_shoulder_roll_joint",
-                ".*_shoulder_yaw_joint",
-                ".*_elbow_joint",
-                ".*_wrist_.*",             
+                # ".*_ankle_roll_joint",
+                # ".*_shoulder_pitch_joint",
+                # ".*_shoulder_roll_joint",
+                # ".*_shoulder_yaw_joint",
+                # ".*_elbow_joint",
+                # ".*_wrist_.*",             
 ]
