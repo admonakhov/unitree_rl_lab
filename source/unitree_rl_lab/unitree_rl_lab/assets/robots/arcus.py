@@ -61,7 +61,7 @@ ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
             effort_limit_sim=25,
             velocity_limit_sim=37,
             stiffness=40.0,
-            damping=1.0,
+            damping=10.0,
             armature=0.01,
         ),
         "N5020-16-parallel": ImplicitActuatorCfg(
@@ -106,16 +106,16 @@ ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
 
 
 LEG_JOINT_NAMES = [
-                # ".*_hip_yaw_joint",
-                # ".*_hip_roll_joint",
-                # ".*_hip_pitch_joint",
-                # ".*_knee_joint",
-                # ".*waist.*",
+                ".*_hip_yaw_joint",
+                ".*_hip_roll_joint",
+                ".*_hip_pitch_joint",
+                ".*_knee_joint",
+                ".*waist.*",
                 ".*_ankle_pitch_joint",
-                # ".*_ankle_roll_joint",
-                # ".*_shoulder_pitch_joint",
-                # ".*_shoulder_roll_joint",
-                # ".*_shoulder_yaw_joint",
-                # ".*_elbow_joint",
-                # ".*_wrist_.*",             
+                ".*_ankle_roll_joint",
+                ".*_shoulder_pitch_joint",
+                ".*_shoulder_roll_joint",
+                ".*_shoulder_yaw_joint",
+                ".*_elbow_joint",
+                ".*_wrist_.*",             
 ]
