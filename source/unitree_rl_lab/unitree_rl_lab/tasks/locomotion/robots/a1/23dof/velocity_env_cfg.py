@@ -1,3 +1,4 @@
+# unitree_23dof_env_cfg.py
 import math
 
 import isaaclab.sim as sim_utils
@@ -18,10 +19,14 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
+# робот и константы (предполагается, что пакет unitree_rl_lab доступен)
 from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_CFG as ROBOT_CFG
 from unitree_rl_lab.assets.robots.arcus import LEG_JOINT_NAMES
 from unitree_rl_lab.tasks.locomotion import mdp
 
+# -----------------------
+# Terrain generator (пример: булыжная дорога + плоское / случайное покрытие)
+# -----------------------
 COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=20.0,
@@ -36,11 +41,13 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
         "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.5),
         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
             proportion=0.5, noise_range=(-0.02, 0.04), noise_step=0.02, border_width=0.25
-        )
+        ),
     },
 )
 
-
+# -----------------------
+# Scene
+# -----------------------
 @configclass
 class RobotSceneCfg(InteractiveSceneCfg):
     """Configuration for the terrain scene with a legged robot."""
@@ -49,7 +56,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
-        terrain_generator=COBBLESTONE_ROAD_CFG,  # None, ROUGH_TERRAINS_CFG
+        terrain_generator=COBBLESTONE_ROAD_CFG,
         max_init_terrain_level=COBBLESTONE_ROAD_CFG.num_rows - 1,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -65,20 +72,24 @@ class RobotSceneCfg(InteractiveSceneCfg):
         ),
         debug_vis=False,
     )
-    # robots
+
+    # robot
     robot: ArticulationCfg = ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
-    # sensors
+    # height ray scanner — уменьшил высоту откуда стреляют лучи, чтобы более релевантно сканировать местность
     height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/torso_link",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 1.0)),  # ~1m над торсом — практичнее чем 20.0
         ray_alignment="yaw",
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )
+
+    # сенсоры контактов (история + отслеживание воздуха)
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
-    # lights
+
+    # освещение
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(
@@ -88,11 +99,14 @@ class RobotSceneCfg(InteractiveSceneCfg):
     )
 
 
+# -----------------------
+# Events (randomization, reset, pushes)
+# -----------------------
 @configclass
 class EventCfg:
     """Configuration for events."""
 
-    # startup
+    # startup randomize physics materials on robot bodies
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
         mode="startup",
@@ -105,6 +119,7 @@ class EventCfg:
         },
     )
 
+    # add a bit of base mass variation (startup)
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
@@ -115,7 +130,7 @@ class EventCfg:
         },
     )
 
-    # reset
+    # reset: external force/torque (обычно ноль)
     base_external_force_torque = EventTerm(
         func=mdp.apply_external_force_torque,
         mode="reset",
@@ -126,6 +141,7 @@ class EventCfg:
         },
     )
 
+    # reset base pose и скорость в пределах
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
@@ -142,16 +158,18 @@ class EventCfg:
         },
     )
 
+    # reset joints: добавил asset_cfg (требование в новых версиях)
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_scale,
         mode="reset",
         params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
             "position_range": (1.0, 1.0),
-            "velocity_range": (-1.0, 1.0),
+            "velocity_range": (-0.5, 0.5),
         },
     )
 
-    # interval
+    # периодические толчки (интервал сбрасывается случайно в заданном диапазоне)
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
         mode="interval",
@@ -160,6 +178,9 @@ class EventCfg:
     )
 
 
+# -----------------------
+# Commands
+# -----------------------
 @configclass
 class CommandsCfg:
     """Command specifications for the MDP."""
@@ -170,9 +191,12 @@ class CommandsCfg:
         rel_standing_envs=0.02,
         rel_heading_envs=1.0,
         heading_command=False,
-        debug_vis=True,
+        debug_vis=False,  # visual debug замедляет большой батч
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-0.1, 0.1)
+            # увеличил диапазон команд для обучения (иначе робот будет стоять)
+            lin_vel_x=(-0.6, 1.2),
+            lin_vel_y=(-0.2, 0.2),
+            ang_vel_z=(-0.6, 0.6),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.6, 1.2), lin_vel_y=(-0.6, 0.6), ang_vel_z=(-1.0, 1.0)
@@ -180,6 +204,9 @@ class CommandsCfg:
     )
 
 
+# -----------------------
+# Actions
+# -----------------------
 @configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
@@ -189,6 +216,9 @@ class ActionsCfg:
     )
 
 
+# -----------------------
+# Observations
+# -----------------------
 @configclass
 class ObservationsCfg:
     """Observation specifications for the MDP."""
@@ -225,11 +255,6 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
         last_action = ObsTerm(func=mdp.last_action)
-        # gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 0.8})
-        # height_scanner = ObsTerm(func=mdp.height_scan,
-        #     params={"sensor_cfg": SceneEntityCfg("height_scanner")},
-        #     clip=(-1.0, 5.0),
-        # )
 
         def __post_init__(self):
             self.history_length = 10
@@ -238,6 +263,9 @@ class ObservationsCfg:
     critic: CriticCfg = CriticCfg()
 
 
+# -----------------------
+# Rewards
+# -----------------------
 @configclass
 class RewardsCfg:
     """Reward terms for the MDP."""
@@ -252,17 +280,21 @@ class RewardsCfg:
         func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
-    alive = RewTerm(func=mdp.is_alive, weight=0.15)
+    # чуть более выраженный alive — помогает в начале тренировки
+    alive = RewTerm(func=mdp.is_alive, weight=0.25)
 
-    # -- base
+    # -- base penalties
     base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     base_angular_velocity = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
+
+    # joint penalties (мягкие поначалу)
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
+    # joint deviation по группам: ноги/руки/валы — уточнил веса
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-0.1,
@@ -279,14 +311,9 @@ class RewardsCfg:
     )
     joint_deviation_waists = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1,
+        weight=-1.0,
         params={
-            "asset_cfg": SceneEntityCfg(
-                "robot",
-                joint_names=[
-                    "waist.*",
-                ],
-            )
+            "asset_cfg": SceneEntityCfg("robot", joint_names=["waist.*"]),
         },
     )
     joint_deviation_legs = RewTerm(
@@ -295,11 +322,11 @@ class RewardsCfg:
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     )
 
-    # -- robot
+    # orientation + height
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
     base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.782})
 
-    # -- feet
+    # feet-related rewards
     gait = RewTerm(
         func=mdp.feet_gait,
         weight=0.5,
@@ -330,23 +357,26 @@ class RewardsCfg:
         },
     )
 
-    # -- other
+    # другие
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
-        weight=-1,
+        weight=-1.0,
         params={
             "threshold": 1,
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["(?!.*ankle.*).*"]),
         },
     )
-    
-    stand_still = RewTerm(func=mdp.stand_still, weight=-1.0,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=LEG_JOINT_NAMES),
-        },
+
+    stand_still = RewTerm(
+        func=mdp.stand_still,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=LEG_JOINT_NAMES)},
     )
 
 
+# -----------------------
+# Terminations
+# -----------------------
 @configclass
 class TerminationsCfg:
     """Termination terms for the MDP."""
@@ -356,24 +386,32 @@ class TerminationsCfg:
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
 
 
+# -----------------------
+# Curriculum
+# -----------------------
 @configclass
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
     terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
-    lin_vel_cmd_levels = CurrTerm(mdp.lin_vel_cmd_levels)
+    lin_vel_cmd_levels = CurrTerm(func=mdp.lin_vel_cmd_levels)
 
 
+# -----------------------
+# Полная конфигурация среды
+# -----------------------
 @configclass
 class RobotEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the locomotion velocity-tracking environment."""
 
     # Scene settings
     scene: RobotSceneCfg = RobotSceneCfg(num_envs=4096, env_spacing=2.5)
+
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
     commands: CommandsCfg = CommandsCfg()
+
     # MDP settings
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
@@ -385,19 +423,19 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
         # general settings
         self.decimation = 4
         self.episode_length_s = 20.0
+
         # simulation settings
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
         self.sim.physics_material = self.scene.terrain.physics_material
+        # ensure enough patches for many envs
         self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
 
-        # update sensor update periods
-        # we tick all the sensors based on the smallest update period (physics update period)
+        # sensor update periods
         self.scene.contact_forces.update_period = self.sim.dt
         self.scene.height_scanner.update_period = self.decimation * self.sim.dt
 
-        # check if terrain levels curriculum is enabled - if so, enable curriculum for terrain generator
-        # this generates terrains with increasing difficulty and is useful for training
+        # enable curriculum in terrain generator если есть terrain_levels
         if getattr(self.curriculum, "terrain_levels", None) is not None:
             if self.scene.terrain.terrain_generator is not None:
                 self.scene.terrain.terrain_generator.curriculum = True
@@ -406,6 +444,9 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
                 self.scene.terrain.terrain_generator.curriculum = False
 
 
+# -----------------------
+# Play config (меньше envs для отладки)
+# -----------------------
 @configclass
 class RobotPlayEnvCfg(RobotEnvCfg):
     def __post_init__(self):
@@ -413,8 +454,7 @@ class RobotPlayEnvCfg(RobotEnvCfg):
         self.scene.num_envs = 32
         self.scene.terrain.terrain_generator.num_rows = 2
         self.scene.terrain.terrain_generator.num_cols = 10
-        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+        limit_ranges = mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(1.0, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
         )
         self.commands.base_velocity.ranges = limit_ranges
-
