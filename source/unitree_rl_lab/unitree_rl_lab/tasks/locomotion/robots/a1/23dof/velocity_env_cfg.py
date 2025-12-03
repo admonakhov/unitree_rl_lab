@@ -191,11 +191,10 @@ class CommandsCfg:
         rel_standing_envs=0.02,
         rel_heading_envs=1.0,
         heading_command=False,
-        debug_vis=False,  # visual debug замедляет большой батч
+        debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            # увеличил диапазон команд для обучения (иначе робот будет стоять)
-            lin_vel_x=(-0.6, 1.2),
-            lin_vel_y=(-0.2, 0.2),
+            lin_vel_x=(-1, 2),
+            lin_vel_y=(-0.5, 0.5),
             ang_vel_z=(-0.6, 0.6),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
@@ -455,6 +454,6 @@ class RobotPlayEnvCfg(RobotEnvCfg):
         self.scene.terrain.terrain_generator.num_rows = 2
         self.scene.terrain.terrain_generator.num_cols = 10
         limit_ranges = mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(1.0, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(0.0, 0.0)
+            lin_vel_x=(-1.0, 5.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0)
         )
         self.commands.base_velocity.ranges = limit_ranges
