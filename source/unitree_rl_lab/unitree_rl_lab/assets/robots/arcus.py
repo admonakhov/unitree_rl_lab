@@ -7,7 +7,7 @@ from unitree_rl_lab.assets.robots.unitree import UnitreeUsdFileCfg, UnitreeUrdfF
 
 ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path=f"/home/ant/UniTree/gym/robots/a1/Arcus_23dof.urdf",
+        asset_path=f"~/UniTree/gym/robots/a1/Arcus_23dof.urdf",
     ),
     # spawn=UnitreeUsdFileCfg(
     #     usd_path=f"{UNITREE_MODEL_DIR}/a1_23dof/a1_23dof.usd",
