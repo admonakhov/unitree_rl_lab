@@ -193,9 +193,9 @@ class CommandsCfg:
         heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1, 2),
-            lin_vel_y=(-0.5, 0.5),
-            ang_vel_z=(-0.6, 0.6),
+            lin_vel_x=(-5, 10),
+            lin_vel_y=(-1.5, 1.5),
+            ang_vel_z=(-1.6, 1.6),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.6, 1.2), lin_vel_y=(-0.6, 0.6), ang_vel_z=(-1.0, 1.0)
