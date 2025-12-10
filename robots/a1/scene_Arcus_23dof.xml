@@ -1,5 +1,5 @@
 <mujoco model="a1 scene">
-  <include file="Arcus_23dof.xml"/>
+  <include file="Arcus_1.5_3.xml"/>
 
   <statistic center="1.0 0.7 1.0" extent="0.8"/>
 
