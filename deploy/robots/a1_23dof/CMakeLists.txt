@@ -26,4 +26,4 @@ file(GLOB_RECURSE ADD_SRC_LIST
 add_library(${PROJECT_NAME}_lib ${ADD_SRC_LIST})
 link_libraries(${PROJECT_NAME}_lib)
 
-add_executable(g1_ctrl main.cpp)
+add_executable(a1_ctrl main.cpp)

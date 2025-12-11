@@ -7,6 +7,11 @@ FSM:
     Velocity:
       id: 3
       type: RLBase
+
+    Mimic_Dance_102: # uncomment to enable
+      id: 101
+      type: Mimic
+
   Passive:
     transitions: 
       FixStand: LT + up.on_pressed
@@ -55,4 +60,15 @@ FSM:
   Velocity:
     transitions: 
       Passive: LT + B.on_pressed
+      Mimic_Dance_102: LT(2s) + down.on_pressed
     policy_dir: ../../../logs/rsl_rl/unitree_arcus_a1_v0_velocity
+
+  Mimic_Dance_102:
+    transitions: 
+      Passive: LT + B.on_pressed
+      Velocity: RB + X.on_pressed
+    fps: 60
+    motion_file: /home/ant/UniTree/gym/retargeting/mocap/out.csv
+    policy_dir: /home/ant/UniTree/gym/unitree_rl_lab/logs/rsl_rl/unitree_arcus_a1_v0_mimic/2025-12-11_15-59-20
+    time_start: 2.8
+    time_end: 24.0
