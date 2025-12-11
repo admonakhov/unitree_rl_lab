@@ -69,6 +69,6 @@ FSM:
       Velocity: RB + X.on_pressed
     fps: 60
     motion_file: /home/ant/UniTree/gym/retargeting/mocap/out.csv
-    policy_dir: /home/ant/UniTree/gym/unitree_rl_lab/logs/rsl_rl/unitree_arcus_a1_v0_mimic/2025-12-11_15-59-20
+    policy_dir: /home/ant/UniTree/gym/unitree_rl_lab/logs/rsl_rl/unitree_arcus_a1_v0_mimic
     time_start: 2.8
     time_end: 24.0
