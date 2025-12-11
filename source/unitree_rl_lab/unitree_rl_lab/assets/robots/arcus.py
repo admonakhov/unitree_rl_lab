@@ -140,11 +140,11 @@ DAMPING_4010 = 2.0 * DAMPING_RATIO * ARMATURE_4010 * NATURAL_FREQ  # 1.068141502
 
 ARCUS_A1_23DOF_MIMIC_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path="robots/a1/Arcus_23dof.urdf",
+        asset_path="robots/a1/arcus_1.5_3.urdf",
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.82),
+        pos=(0.0, 0.0, 0.85),
         joint_pos={
             ".*_hip_pitch_joint": -0.312,
             ".*_knee_joint": 0.669,
@@ -292,15 +292,11 @@ ARCUS_A1_23DOF_MIMIC_CFG = UnitreeArticulationCfg(
         "right_ankle_pitch_joint",
         "right_ankle_roll_joint",
         "waist_yaw_joint",
-        "",
-        "",
         "left_shoulder_pitch_joint",
         "left_shoulder_roll_joint",
         "left_shoulder_yaw_joint",
         "left_elbow_joint",
         "left_wrist_roll_joint",
-        "",
-        "",
         "right_shoulder_pitch_joint",
         "right_shoulder_roll_joint",
         "right_shoulder_yaw_joint",
