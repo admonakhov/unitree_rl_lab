@@ -37,7 +37,7 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 # Import MDP utilities for motion tracking
 import unitree_rl_lab.tasks.mimic.mdp as mdp
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_CFG as ROBOT_CFG
 
 ##
 # Velocity and Pose Ranges
@@ -458,6 +458,11 @@ class Arcus23DofMocapPlayEnvCfg(Arcus23DofMocapEnvCfg):
 
     def __post_init__(self):
         super().__post_init__()
+        self.decimation = 4  # Control frequency = 50Hz (sim at 200Hz)
+        self.episode_length_s = 30.0  # Episode duration
+
+        # Simulation settings
+        self.sim.dt = 0.005  # 200 Hz physics simulation
         # Override for single environment visualization
         self.scene.num_envs = 1
         self.episode_length_s = 1e9  # Infinite episode for visualization
