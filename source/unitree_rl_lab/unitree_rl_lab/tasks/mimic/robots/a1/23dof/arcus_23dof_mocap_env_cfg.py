@@ -37,7 +37,7 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 # Import MDP utilities for motion tracking
 import unitree_rl_lab.tasks.mimic.mdp as mdp
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_CFG as ROBOT_CFG
 
 ##
 # Velocity and Pose Ranges
@@ -79,9 +79,7 @@ class Arcus23DofMocapSceneCfg(InteractiveSceneCfg):
     # Ground terrain with appropriate friction
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
-        terrain_type="generator",  # "plane", "generator"
-        terrain_generator=COBBLESTONE_ROAD_CFG,
-        max_init_terrain_level=COBBLESTONE_ROAD_CFG.num_rows - 1,
+        terrain_type="plane",
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -90,34 +88,23 @@ class Arcus23DofMocapSceneCfg(InteractiveSceneCfg):
             dynamic_friction=1.0,
         ),
         visual_material=sim_utils.MdlFileCfg(
-            mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/TilesMarbleSpiderWhiteBrickBondHoned.mdl",
+            mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
             project_uvw=True,
-            texture_scale=(0.25, 0.25),
         ),
-        debug_vis=False,
     )
-
-    # Arcus 23DOF robot
+    # robots
     robot: ArticulationCfg = ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
-    # Lighting
+    # lights
     light = AssetBaseCfg(
         prim_path="/World/light",
         spawn=sim_utils.DistantLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
     )
-
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(color=(0.13, 0.13, 0.13), intensity=1000.0),
     )
-
-    # Contact sensor for tracking contacts
     contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*",
-        history_length=3,
-        track_air_time=True,
-        force_threshold=10.0,
-        debug_vis=True
+        prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True, force_threshold=10.0, debug_vis=True
     )
 
 ##
@@ -132,7 +119,7 @@ class CommandsCfg:
         asset_name="robot",
         # Path to your motion file (convert with csv_to_npz.py before training)
         # Example: python scripts/mimic/csv_to_npz.py -f motion.csv --input_fps 60
-        motion_file="/home/ant/UniTree/gym/retargeting/mocap/out.npz",
+        motion_file="/home/monahov/UniTree/gym/unitree_rl_lab/mocap/mocap/walking_60fps.npz.npz",
         anchor_body_name="torso_link",  # Main tracking reference body
         resampling_time_range=(1.0e9, 1.0e9),  # No resampling (use full motion)
         debug_vis=True,  # Visualize motion tracking in simulation
