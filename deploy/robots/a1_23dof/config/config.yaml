@@ -68,7 +68,8 @@ FSM:
       Passive: LT + B.on_pressed
       Velocity: RB + X.on_pressed
     fps: 60
-    motion_file: /home/ant/UniTree/gym/retargeting/mocap/out.csv
+    motion_file: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
+    # motion_file: cnfig/policy/mimic/gangnam_style/params/G1_gangnam_style_V01.bvh_60hz.csv
     policy_dir: /home/ant/UniTree/gym/unitree_rl_lab/logs/rsl_rl/unitree_arcus_a1_v0_mimic
-    time_start: 2.8
-    time_end: 24.0
+    time_start: 0
+    time_end: 60.0
