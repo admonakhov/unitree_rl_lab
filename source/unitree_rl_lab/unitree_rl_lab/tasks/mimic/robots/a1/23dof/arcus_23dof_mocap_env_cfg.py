@@ -119,7 +119,7 @@ class CommandsCfg:
         asset_name="robot",
         # Path to your motion file (convert with csv_to_npz.py before training)
         # Example: python scripts/mimic/csv_to_npz.py -f motion.csv --input_fps 60
-        motion_file="/home/monahov/UniTree/gym/unitree_rl_lab/mocap/mocap/walking_60fps.npz.npz",
+        motion_file="/home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz",
         anchor_body_name="torso_link",  # Main tracking reference body
         resampling_time_range=(1.0e9, 1.0e9),  # No resampling (use full motion)
         debug_vis=True,  # Visualize motion tracking in simulation
@@ -374,11 +374,7 @@ class RewardsCfg:
         params={
             "sensor_cfg": SceneEntityCfg(
                 "contact_forces",
-                body_names=[
-                    # Regex: all bodies except feet and hands
-                    r"^(?!left_ankle_roll_link$)(?!right_ankle_roll_link$)"
-                    r"(?!left_wrist_roll_rubber_hand$)(?!right_wrist_roll_rubber_hand$).+$"
-                ],
+                body_names=["(?!.*ankle.*).*"],
             ),
             "threshold": 1.0,
         },
