@@ -1,6 +1,11 @@
 <mujoco model="arcus_1.5_4">
   <compiler angle="radian" meshdir="meshes/"/>
 
+  <statistic meansize="0.144785" extent="1.23314" center="0.025392 2.0634e-05 -2.245975"/>
+   <default>
+    <joint damping="0.01" armature="0.01" frictionloss="0.1"/>
+  </default>
+  
   <asset>
     <mesh name="pelvis" file="pelvis.STL"/>
     <mesh name="torso_link" file="torso_link.STL"/>
