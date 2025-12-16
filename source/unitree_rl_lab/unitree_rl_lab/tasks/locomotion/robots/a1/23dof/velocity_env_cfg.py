@@ -209,11 +209,30 @@ class CommandsCfg:
 @configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
-
-    JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
+    
+    # Действия для ног
+    JointPositionActionLegs = mdp.JointPositionActionCfg(
+        asset_name="robot", 
+        joint_names=[
+            ".*_hip_.*_joint",
+            ".*_knee_joint",
+            ".*_ankle_.*_joint"
+        ], 
+        scale=0.25, 
+        use_default_offset=True
     )
-
+    
+    # Действия для рук с меньшим масштабом
+    JointPositionActionArms = mdp.JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=[
+            ".*_shoulder_.*_joint",
+            ".*_elbow_joint",
+            ".*_wrist_.*",
+        ],
+        scale=0.05,  # Значительно меньше, чем для ног
+        use_default_offset=True
+    )
 
 # -----------------------
 # Observations
@@ -293,6 +312,21 @@ class RewardsCfg:
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
+
+    arm_joint_vel = RewTerm(
+        func=mdp.joint_vel_l2, 
+        weight=-0.1,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[
+                    ".*_shoulder_.*_joint",
+                    ".*_elbow_joint",
+                    ".*_wrist_.*",
+                ],
+            )
+        },
+    )
     # joint deviation по группам: ноги/руки/валы — уточнил веса
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
