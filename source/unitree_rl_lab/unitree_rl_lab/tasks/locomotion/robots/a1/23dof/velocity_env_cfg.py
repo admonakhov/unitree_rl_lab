@@ -190,19 +190,19 @@ class CommandsCfg:
         resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.01,
         rel_heading_envs=0.5,  
-        heading_command=True,  # ВКЛЮЧАЕМ поддержку поворотов
+        heading_command=True,  
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.5, 1.0),
             lin_vel_y=(-0.5, 0.5),
-            ang_vel_z=(-0.6, 0.6),
-            heading=(-3.14159, 3.14159),  # ОБЯЗАТЕЛЬНО! Целевой угол поворота в радианах
+            ang_vel_z=(-1, 1),
+            heading=(-3.14159, 3.14159), 
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.6, 1.2),
             lin_vel_y=(-0.6, 0.6),
             ang_vel_z=(-1.0, 1.0),
-            heading=(-3.14159, 3.14159),  # Также требуется в limit_ranges
+            heading=(-3.14159, 3.14159), 
         ),
     )
 
@@ -283,14 +283,14 @@ class RewardsCfg:
         func=mdp.track_ang_vel_z_exp, weight=1, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
-    # чуть более выраженный alive — помогает в начале тренировки
+
     alive = RewTerm(func=mdp.is_alive, weight=0.05)
 
     # -- base penalties
     base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     base_angular_velocity = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
 
-    # joint penalties (мягкие поначалу)
+    # joint penalties 
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-5e-7)
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.04)
@@ -298,10 +298,10 @@ class RewardsCfg:
     energy = RewTerm(func=mdp.energy, weight=-3e-5)
 
 
-    # joint deviation по группам: ноги/руки/валы — уточнил веса
+    # joint deviation 
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.15,
+        weight=-0.1,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -333,9 +333,9 @@ class RewardsCfg:
     # feet-related rewards
     gait = RewTerm(
         func=mdp.feet_gait,
-        weight=0.5,
+        weight=1,
         params={
-            "period": 1.1,
+            "period": 1.5,
             "offset": [0.0, 0.5],
             "threshold": 0.5,
             "command_name": "base_velocity",
@@ -362,7 +362,6 @@ class RewardsCfg:
         },
     )
 
-    # другие
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
