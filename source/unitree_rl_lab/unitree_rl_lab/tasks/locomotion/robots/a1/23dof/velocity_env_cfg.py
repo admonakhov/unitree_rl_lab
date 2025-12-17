@@ -189,7 +189,7 @@ class CommandsCfg:
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.01,
-        rel_heading_envs=0.25,  # вероятность выполнения поворота на месте (10%)
+        rel_heading_envs=0.5,  
         heading_command=True,  # ВКЛЮЧАЕМ поддержку поворотов
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
@@ -280,7 +280,7 @@ class RewardsCfg:
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
     track_ang_vel_z = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+        func=mdp.track_ang_vel_z_exp, weight=1, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
     # чуть более выраженный alive — помогает в начале тренировки
@@ -337,7 +337,7 @@ class RewardsCfg:
         params={
             "period": 1.1,
             "offset": [0.0, 0.5],
-            "threshold": 0.65,
+            "threshold": 0.5,
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
         },
@@ -459,7 +459,7 @@ class RobotPlayEnvCfg(RobotEnvCfg):
         self.scene.num_envs = 32
         self.scene.terrain.terrain_generator.num_rows = 2
         self.scene.terrain.terrain_generator.num_cols = 10
-        # limit_ranges = mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(-1.0, 5.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0)
-        # )
-        # self.commands.base_velocity.ranges = limit_ranges
+        limit_ranges = mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(-1.0, 1.5), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=(-3.14159, 3.14159),
+        )
+        self.commands.base_velocity.ranges = limit_ranges
