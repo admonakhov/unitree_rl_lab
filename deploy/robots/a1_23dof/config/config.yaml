@@ -8,9 +8,9 @@ FSM:
       id: 3
       type: RLBase
 
-    Mimic_Dance_102: # uncomment to enable
-      id: 101
-      type: Mimic
+    # Mimic_Dance_102: # uncomment to enable
+    #   id: 101
+    #   type: Mimic
 
   Passive:
     transitions: 

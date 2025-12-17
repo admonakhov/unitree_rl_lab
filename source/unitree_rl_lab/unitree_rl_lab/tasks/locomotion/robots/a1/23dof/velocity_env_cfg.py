@@ -189,16 +189,20 @@ class CommandsCfg:
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.02,
-        rel_heading_envs=1.0,
-        heading_command=False,
+        rel_heading_envs=0.25,  # вероятность выполнения поворота на месте (10%)
+        heading_command=True,  # ВКЛЮЧАЕМ поддержку поворотов
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1, 2),
-            lin_vel_y=(-1.0, 1.0),
-            ang_vel_z=(-1., 1.),
+            lin_vel_x=(-0.5, 1.0),
+            lin_vel_y=(-0.5, 0.5),
+            ang_vel_z=(-0.6, 0.6),
+            heading=(-3.14159, 3.14159),  # ОБЯЗАТЕЛЬНО! Целевой угол поворота в радианах
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1, 2), lin_vel_y=(-1, 1), ang_vel_z=(-1.0, 1.0)
+            lin_vel_x=(-0.6, 1.2),
+            lin_vel_y=(-0.6, 0.6),
+            ang_vel_z=(-1.0, 1.0),
+            heading=(-3.14159, 3.14159),  # Также требуется в limit_ranges
         ),
     )
 
@@ -209,30 +213,11 @@ class CommandsCfg:
 @configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
-    
-    # Действия для ног
-    JointPositionActionLegs = mdp.JointPositionActionCfg(
-        asset_name="robot", 
-        joint_names=[
-            ".*_hip_.*_joint",
-            ".*_knee_joint",
-            ".*_ankle_.*_joint"
-        ], 
-        scale=0.25, 
-        use_default_offset=True
+
+    JointPositionAction = mdp.JointPositionActionCfg(
+        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
     )
-    
-    # Действия для рук с меньшим масштабом
-    JointPositionActionArms = mdp.JointPositionActionCfg(
-        asset_name="robot",
-        joint_names=[
-            ".*_shoulder_.*_joint",
-            ".*_elbow_joint",
-            ".*_wrist_.*",
-        ],
-        scale=0.05,  # Значительно меньше, чем для ног
-        use_default_offset=True
-    )
+
 
 # -----------------------
 # Observations
@@ -299,34 +284,20 @@ class RewardsCfg:
     )
 
     # чуть более выраженный alive — помогает в начале тренировки
-    alive = RewTerm(func=mdp.is_alive, weight=0.25)
+    alive = RewTerm(func=mdp.is_alive, weight=0.05)
 
     # -- base penalties
     base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     base_angular_velocity = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
 
     # joint penalties (мягкие поначалу)
-    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
-    joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
-    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
-    energy = RewTerm(func=mdp.energy, weight=-2e-5)
+    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
+    joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-5e-7)
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.04)
+    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-7.0)
+    energy = RewTerm(func=mdp.energy, weight=-3e-5)
 
 
-    arm_joint_vel = RewTerm(
-        func=mdp.joint_vel_l2, 
-        weight=-0.1,
-        params={
-            "asset_cfg": SceneEntityCfg(
-                "robot",
-                joint_names=[
-                    ".*_shoulder_.*_joint",
-                    ".*_elbow_joint",
-                    ".*_wrist_.*",
-                ],
-            )
-        },
-    )
     # joint deviation по группам: ноги/руки/валы — уточнил веса
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
@@ -337,14 +308,14 @@ class RewardsCfg:
                 joint_names=[
                     ".*_shoulder_.*_joint",
                     ".*_elbow_joint",
-                    ".*_wrist_.*",
+                    ".*_wrist_roll_joint",
                 ],
             )
         },
     )
     joint_deviation_waists = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-1.0,
+        weight=-0.9,
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=["waist.*"]),
         },
@@ -357,20 +328,21 @@ class RewardsCfg:
 
     # orientation + height
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.782})
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.8})
 
     # feet-related rewards
     gait = RewTerm(
         func=mdp.feet_gait,
         weight=0.5,
         params={
-            "period": 0.9,
-            "offset": [0.0, 0.5],
-            "threshold": 0.55,
+            "period": 1.1,
+            "offset": [0.0, 0.0],
+            "threshold": 0.6,
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
         },
     )
+
     feet_slide = RewTerm(
         func=mdp.feet_slide,
         weight=-0.2,
