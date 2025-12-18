@@ -316,7 +316,7 @@ class RewardsCfg:
 
     joint_deviation_elbow = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.01,
+        weight=-0.05,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -347,7 +347,7 @@ class RewardsCfg:
     )
 
     # orientation + height
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2.0)
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2.5)
     base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.75})
 
     # feet-related rewards
