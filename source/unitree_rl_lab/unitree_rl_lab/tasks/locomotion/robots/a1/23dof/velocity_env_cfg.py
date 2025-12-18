@@ -189,13 +189,13 @@ class CommandsCfg:
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.01,
-        rel_heading_envs=0.5,  
+        rel_heading_envs=0.4,  
         heading_command=True,  
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.5, 1.0),
             lin_vel_y=(-0.5, 0.5),
-            ang_vel_z=(-1, 1),
+            ang_vel_z=(-0.7, 0.7),
             heading=(-3.14159, 3.14159), 
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
@@ -295,20 +295,35 @@ class RewardsCfg:
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-5e-7)
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.04)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-7.0)
-    energy = RewTerm(func=mdp.energy, weight=-3e-5)
+    energy = RewTerm(func=mdp.energy, weight=-5e-5)
 
 
     # joint deviation 
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.1,
+        weight=-0.3,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
                 joint_names=[
                     ".*_shoulder_.*_joint",
-                    ".*_elbow_joint",
                     ".*_wrist_roll_joint",
+                ],
+            )
+        },
+    )
+
+
+    joint_deviation_elbow = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=0.005,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[
+
+                    ".*_elbow_joint",
+
                 ],
             )
         },
@@ -324,6 +339,11 @@ class RewardsCfg:
         func=mdp.joint_deviation_l1,
         weight=-1.0,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
+    )
+    joint_deviation_feet = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=0.1,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_pitch_joint", ".*_knee_joint"])},
     )
 
     # orientation + height
@@ -357,7 +377,7 @@ class RewardsCfg:
         params={
             "std": 0.05,
             "tanh_mult": 2.0,
-            "target_height": 0.1,
+            "target_height": 0.15,
             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
         },
     )
