@@ -355,7 +355,7 @@ class RewardsCfg:
         func=mdp.feet_gait,
         weight=1,
         params={
-            "period": 1.5,
+            "period": 1.,
             "offset": [0.0, 0.5],
             "threshold": 0.5,
             "command_name": "base_velocity",
@@ -377,7 +377,7 @@ class RewardsCfg:
         params={
             "std": 0.05,
             "tanh_mult": 2.0,
-            "target_height": 0.15,
+            "target_height": 0.1,
             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
         },
     )
