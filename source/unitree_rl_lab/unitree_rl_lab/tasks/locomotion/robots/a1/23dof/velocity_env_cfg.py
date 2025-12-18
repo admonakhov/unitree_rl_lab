@@ -295,7 +295,7 @@ class RewardsCfg:
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-5e-7)
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.04)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-7.0)
-    energy = RewTerm(func=mdp.energy, weight=-3e-4)
+    energy = RewTerm(func=mdp.energy, weight=-3e-3)
 
 
     # joint deviation 
