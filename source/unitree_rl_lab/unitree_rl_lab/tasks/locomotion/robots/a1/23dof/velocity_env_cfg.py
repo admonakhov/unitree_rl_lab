@@ -316,7 +316,7 @@ class RewardsCfg:
 
     joint_deviation_elbow = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=0.005,
+        weight=-0.01,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
