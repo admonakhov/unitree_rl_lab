@@ -292,16 +292,9 @@ class ObservationsCfg:
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
         last_action = ObsTerm(func=mdp.last_action)
 
-        # Motion command observations for AMP-style regularization
-        motion_command = ObsTerm(
-            func=mimic_mdp.generated_commands,
-            params={"command_name": "motion"}
-        )
-        motion_anchor_ori_b = ObsTerm(
-            func=mimic_mdp.motion_anchor_ori_b,
-            params={"command_name": "motion"},
-            noise=Unoise(n_min=-0.05, n_max=0.05)
-        )
+        # Note: motion_command and motion_anchor_ori_b are removed from policy observations
+        # to avoid requiring motion data during deployment. They remain in critic observations
+        # for AMP discriminator training during learning.
 
         def __post_init__(self):
             self.history_length = 10
@@ -324,18 +317,18 @@ class ObservationsCfg:
         last_action = ObsTerm(func=mdp.last_action)
 
         # Motion command observations for critic
-        motion_command = ObsTerm(
-            func=mimic_mdp.generated_commands,
-            params={"command_name": "motion"}
-        )
-        motion_anchor_pos_b = ObsTerm(
-            func=mimic_mdp.motion_anchor_pos_b,
-            params={"command_name": "motion"}
-        )
-        motion_anchor_ori_b = ObsTerm(
-            func=mimic_mdp.motion_anchor_ori_b,
-            params={"command_name": "motion"}
-        )
+        # motion_command = ObsTerm(
+        #     func=mimic_mdp.generated_commands,
+        #     params={"command_name": "motion"}
+        # )
+        # motion_anchor_pos_b = ObsTerm(
+        #     func=mimic_mdp.motion_anchor_pos_b,
+        #     params={"command_name": "motion"}
+        # )
+        # motion_anchor_ori_b = ObsTerm(
+        #     func=mimic_mdp.motion_anchor_ori_b,
+        #     params={"command_name": "motion"}
+        # )
 
         def __post_init__(self):
             self.history_length = 10
@@ -358,7 +351,7 @@ class RewardsCfg:
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
     track_ang_vel_z = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=1, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+        func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
     # -- AMP-style motion tracking rewards (regularize motion to be natural)
@@ -384,80 +377,69 @@ class RewardsCfg:
     )
 
     # -- Regularization rewards
-    alive = RewTerm(func=mdp.is_alive, weight=0.05)
+    alive = RewTerm(func=mdp.is_alive, weight=0.15)
 
     # -- base penalties
     base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     base_angular_velocity = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
 
     # joint penalties
-    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
-    joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-5e-6)
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.04)
-    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-7.0)
-    energy = RewTerm(func=mdp.energy, weight=-5e-3)
+    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.001)
+    joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
+    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
+    energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
     # joint deviation
-    joint_deviation_arms = RewTerm(
-        func=mdp.joint_deviation_l1,
-        weight=-0.1,
-        params={
-            "asset_cfg": SceneEntityCfg(
-                "robot",
-                joint_names=[
-                    ".*_shoulder_.*_joint",
-                    ".*_wrist_roll_joint",
-                ],
-            )
-        },
-    )
+    # joint_deviation_arms = RewTerm(
+    #     func=mdp.joint_deviation_l1,
+    #     weight=-0.1,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg(
+    #             "robot",
+    #             joint_names=[
+    #                 ".*_shoulder_.*_joint",
+    #                 ".*_elbow_joint",
+    #                 ".*_wrist_roll_joint",
+    #             ],
+    #         )
+    #     },
+    # )
 
-    joint_deviation_elbow = RewTerm(
-        func=mdp.joint_deviation_l1,
-        weight=-0.025,
-        params={
-            "asset_cfg": SceneEntityCfg(
-                "robot",
-                joint_names=[
-                    ".*_elbow_joint",
-                ],
-            )
-        },
-    )
-    joint_deviation_waists = RewTerm(
-        func=mdp.joint_deviation_l1,
-        weight=-0.9,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=["waist.*"]),
-        },
-    )
-    joint_deviation_legs = RewTerm(
-        func=mdp.joint_deviation_l1,
-        weight=-1.0,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
-    )
-    joint_deviation_feet = RewTerm(
-        func=mdp.joint_deviation_l1,
-        weight=0.1,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_pitch_joint", ".*_knee_joint"])},
-    )
+    # joint_deviation_waists = RewTerm(
+    #     func=mdp.joint_deviation_l1,
+    #     weight=-1,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=["waist.*"]),
+    #     },
+    # )
+    # joint_deviation_legs = RewTerm(
+    #     func=mdp.joint_deviation_l1,
+    #     weight=-1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
+    # )
+    # joint_deviation_feet = RewTerm(
+    #     func=mdp.joint_deviation_l1,
+    #     weight=0.1,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_pitch_joint", ".*_knee_joint"])},
+    # )
 
     # orientation + height
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2.5)
     base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.75})
 
     # feet-related rewards
-    gait = RewTerm(
-        func=mdp.feet_gait,
-        weight=1,
-        params={
-            "period": 1.0,
-            "offset": [0.0, 0.5],
-            "threshold": 0.5,
-            "command_name": "base_velocity",
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
-        },
-    )
+    # gait = RewTerm(
+    #     func=mdp.feet_gait,
+    #     weight=1,
+    #     params={
+    #         "period": 1.0,
+    #         "offset": [0.0, 0.5],
+    #         "threshold": 0.55,
+    #         "command_name": "base_velocity",
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+    #     },
+    # )
 
     feet_slide = RewTerm(
         func=mdp.feet_slide,
