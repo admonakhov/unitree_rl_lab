@@ -219,7 +219,7 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file="/home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz",
+        motion_file="mocap/walking_60fps.npz",
         anchor_body_name="torso_link",
         resampling_time_range=(1.0e9, 1.0e9),  # No resampling (use full motion)
         debug_vis=False,

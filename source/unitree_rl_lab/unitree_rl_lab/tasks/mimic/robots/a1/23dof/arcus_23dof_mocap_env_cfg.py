@@ -119,7 +119,7 @@ class CommandsCfg:
         asset_name="robot",
         # Path to your motion file (convert with csv_to_npz.py before training)
         # Example: python scripts/mimic/csv_to_npz.py -f motion.csv --input_fps 60
-        motion_file="/home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz",
+        motion_file="mocap/walking_60fps.npz",
         anchor_body_name="torso_link",  # Main tracking reference body
         resampling_time_range=(1.0e9, 1.0e9),  # No resampling (use full motion)
         debug_vis=True,  # Visualize motion tracking in simulation
