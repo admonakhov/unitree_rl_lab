@@ -36,7 +36,7 @@ from isaaclab.sim import SimulationContext
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
-from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_23DOF_MIMIC_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_CFG as ROBOT_CFG
 
 # from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG  # Currently only support G1-29dof
 from unitree_rl_lab.tasks.mimic.mdp import MotionLoader
@@ -96,7 +96,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         scene.update(sim_dt)
 
         pos_lookat = root_states[0, :3].cpu().numpy()
-        sim.set_camera_view(pos_lookat + np.array([2.0, 2.0, 0.5]), pos_lookat)
+        sim.set_camera_view(pos_lookat + np.array([2.5, 0.0, 0.5]), pos_lookat)
 
 
 def main():
