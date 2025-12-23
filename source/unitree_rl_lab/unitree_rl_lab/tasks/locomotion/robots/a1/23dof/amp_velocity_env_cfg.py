@@ -195,8 +195,8 @@ class CommandsCfg:
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
-        rel_standing_envs=0.01,
-        rel_heading_envs=0.4,
+        rel_standing_envs=0.1,
+        rel_heading_envs=0.3,
         heading_command=True,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
@@ -219,7 +219,7 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file="mocap/walking_60fps.npz",
+        motion_file="mocap/walk_23.npz",
         anchor_body_name="torso_link",
         resampling_time_range=(1.0e9, 1.0e9),  # No resampling (use full motion)
         debug_vis=False,
@@ -429,17 +429,17 @@ class RewardsCfg:
     base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.75})
 
     # feet-related rewards
-    # gait = RewTerm(
-    #     func=mdp.feet_gait,
-    #     weight=1,
-    #     params={
-    #         "period": 1.0,
-    #         "offset": [0.0, 0.5],
-    #         "threshold": 0.55,
-    #         "command_name": "base_velocity",
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
-    #     },
-    # )
+    gait = RewTerm(
+        func=mdp.feet_gait,
+        weight=1,
+        params={
+            "period": 1.0,
+            "offset": [0.0, 0.5],
+            "threshold": 0.55,
+            "command_name": "base_velocity",
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        },
+    )
 
     feet_slide = RewTerm(
         func=mdp.feet_slide,
