@@ -1360,7 +1360,7 @@
       velocity="37" />
     <dynamics
       damping="0.01"
-      friction="0.1" />
+      friction="0.3" />
   </joint>
   <joint name="left_wrist_roll_joint"
     type="revolute">
@@ -1460,7 +1460,7 @@
       velocity="37" />
     <dynamics
       damping="0.01"
-      friction="0.1" />
+      friction="0.3" />
   </joint>
   <joint name="right_wrist_roll_joint"
     type="revolute">
