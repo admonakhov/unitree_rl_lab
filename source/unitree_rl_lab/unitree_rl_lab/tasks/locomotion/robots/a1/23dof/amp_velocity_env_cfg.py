@@ -364,12 +364,12 @@ class RewardsCfg:
     # Increased weights back for arms since arm movement is critical
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
-        weight=1.5,  # Increased back to prioritize arm movement
-        params={"command_name": "motion", "std": 0.5},  # Tighter std for better arm tracking
+        weight=0.5,  # Increased back to prioritize arm movement
+        params={"command_name": "motion", "std": 0.25},  # Tighter std for better arm tracking
     )
     motion_body_ori = RewTerm(
         func=mimic_mdp.motion_relative_body_orientation_error_exp,
-        weight=1.5,  # Increased back to prioritize arm movement
+        weight=0.5,  # Increased back to prioritize arm movement
         params={"command_name": "motion", "std": 0.25},  # Tighter std for better arm tracking
     )
     # Velocity tracking - for smooth motion
