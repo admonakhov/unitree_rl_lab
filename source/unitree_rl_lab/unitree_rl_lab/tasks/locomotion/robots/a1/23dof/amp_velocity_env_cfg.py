@@ -222,7 +222,7 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file="mocap/walk_23_full.npz",
+        motion_file="mocap/walk_23.npz",
         anchor_body_name="torso_link",
         resampling_time_range=(10.0, 30.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
@@ -427,8 +427,8 @@ class RewardsCfg:
     alive = RewTerm(func=mdp.is_alive, weight=0.15)
 
     # -- base penalties
-    # base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
-    # base_angular_velocity = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
+    base_linear_velocity = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+    base_angular_velocity = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
 
     # joint penalties
     joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
@@ -476,8 +476,8 @@ class RewardsCfg:
     # )
 
     # orientation + height: penalize large body tilt and incorrect base height
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.5)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.30})
+    # flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.5)
+    # base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.30})
 
     # feet-related rewards
     gait = RewTerm(
