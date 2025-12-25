@@ -194,21 +194,24 @@ class CommandsCfg:
     # Velocity command for locomotion
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(10.0, 50.0),
+        # allow more frequent resampling to improve responsiveness when turning
+        resampling_time_range=(5.0, 30.0),
         rel_standing_envs=0.01,
         rel_heading_envs=0.3,
-        heading_command=False,
+        # enable heading command so policy receives/uses target heading
+        heading_command=True,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.5, 1.0),
             lin_vel_y=(-0.5, 0.5),
-            ang_vel_z=(-0.7, 0.7),
+            # increase angular velocity command range to allow stronger turns
+            ang_vel_z=(-1.0, 1.0),
             heading=(-3.14159, 3.14159),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.6, 1.2),
             lin_vel_y=(-0.6, 0.6),
-            ang_vel_z=(-1.0, 1.0),
+            ang_vel_z=(-1.2, 1.2),
             heading=(-3.14159, 3.14159),
         ),
     )
@@ -343,8 +346,9 @@ class RewardsCfg:
         weight=1.0,  # Slightly reduced to balance with stronger motion tracking
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
+    # stronger angular velocity tracking to improve turning behavior
     track_ang_vel_z = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+        func=mdp.track_ang_vel_z_exp, weight=1.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
     # -- AMP-style motion tracking rewards (regularize motion to be natural)
@@ -429,7 +433,8 @@ class RewardsCfg:
     # joint penalties
     joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
+    # reduce action-rate penalty so larger corrective actions are not overly discouraged
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.02)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     # energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
@@ -470,9 +475,9 @@ class RewardsCfg:
     #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_pitch_joint", ".*_knee_joint"])},
     # )
 
-    # orientation + height
-    # flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2.5)
-    # base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.75})
+    # orientation + height: penalize large body tilt and incorrect base height
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.5)
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.30})
 
     # feet-related rewards
     gait = RewTerm(
