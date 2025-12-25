@@ -288,7 +288,16 @@ class MotionCommand(CommandTerm):
 
         delta_pos_w = robot_anchor_pos_w_repeat
         delta_pos_w[..., 2] = anchor_pos_w_repeat[..., 2]
-        delta_ori_w = yaw_quat(quat_mul(robot_anchor_quat_w_repeat, quat_inv(anchor_quat_w_repeat)))
+        original_delta_ori_w = yaw_quat(quat_mul(robot_anchor_quat_w_repeat, quat_inv(anchor_quat_w_repeat)))
+
+        if self.cfg.velocity_command_name is not None:
+            velocity_commands = self._env.command_manager.get_command(self.cfg.velocity_command_name)
+            desired_yaw = torch.atan2(velocity_commands[:, 1], velocity_commands[:, 0])  # atan2(lin_vel_y, lin_vel_x)
+            desired_quat = torch.stack([torch.cos(desired_yaw * 0.5), torch.zeros_like(desired_yaw), torch.zeros_like(desired_yaw), torch.sin(desired_yaw * 0.5)], dim=-1)
+            desired_quat_expanded = desired_quat[:, None, :].repeat(1, len(self.cfg.body_names), 1)
+            delta_ori_w = quat_mul(desired_quat_expanded, original_delta_ori_w)
+        else:
+            delta_ori_w = original_delta_ori_w
 
         self.body_quat_relative_w = quat_mul(delta_ori_w, self.body_quat_w)
         self.body_pos_relative_w = delta_pos_w + quat_apply(delta_ori_w, self.body_pos_w - anchor_pos_w_repeat)
@@ -369,6 +378,8 @@ class MotionCommandCfg(CommandTermCfg):
     adaptive_lambda: float = 0.8
     adaptive_uniform_ratio: float = 0.1
     adaptive_alpha: float = 0.001
+
+    velocity_command_name: str | None = None  # Name of velocity command to align motion direction with
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")
     anchor_visualizer_cfg.markers["frame"].scale = (0.2, 0.2, 0.2)

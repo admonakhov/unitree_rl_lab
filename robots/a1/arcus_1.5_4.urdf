@@ -1300,7 +1300,7 @@
       velocity="37" />
     <dynamics
       damping="0.01"
-      friction="0.3" />
+      friction="0.1" />
   </joint>
   <joint name="left_shoulder_roll_joint"
     type="revolute">
@@ -1360,7 +1360,7 @@
       velocity="37" />
     <dynamics
       damping="0.01"
-      friction="0.3" />
+      friction="0.1" />
   </joint>
   <joint name="left_wrist_roll_joint"
     type="revolute">
@@ -1400,7 +1400,7 @@
       velocity="37" />
     <dynamics
       damping="0.01"
-      friction="0.3" />
+      friction="0.1" />
   </joint>
   <joint name="right_shoulder_roll_joint"
     type="revolute">
@@ -1460,7 +1460,7 @@
       velocity="37" />
     <dynamics
       damping="0.01"
-      friction="0.3" />
+      friction="0.1" />
   </joint>
   <joint name="right_wrist_roll_joint"
     type="revolute">
