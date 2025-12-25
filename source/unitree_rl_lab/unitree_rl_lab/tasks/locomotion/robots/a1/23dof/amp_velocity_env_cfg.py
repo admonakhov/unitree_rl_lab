@@ -196,16 +196,15 @@ class CommandsCfg:
         asset_name="robot",
         # allow more frequent resampling to improve responsiveness when turning
         resampling_time_range=(5.0, 30.0),
-        rel_standing_envs=0.01,
-        rel_heading_envs=0.3,
+        rel_standing_envs=0.2,
+        rel_heading_envs=0.2,
         # enable heading command so policy receives/uses target heading
         heading_command=True,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.5, 1.0),
             lin_vel_y=(-0.5, 0.5),
-            # increase angular velocity command range to allow stronger turns
-            ang_vel_z=(-1.0, 1.0),
+            ang_vel_z=(-0.7, 0.7),
             heading=(-3.14159, 3.14159),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
@@ -434,7 +433,7 @@ class RewardsCfg:
     joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     # reduce action-rate penalty so larger corrective actions are not overly discouraged
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.02)
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     # energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
@@ -464,11 +463,11 @@ class RewardsCfg:
     #         "asset_cfg": SceneEntityCfg("robot", joint_names=["waist.*"]),
     #     },
     # )
-    # joint_deviation_legs = RewTerm(
-    #     func=mdp.joint_deviation_l1,
-    #     weight=-1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
-    # )
+    joint_deviation_legs = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
+    )
     # joint_deviation_feet = RewTerm(
     #     func=mdp.joint_deviation_l1,
     #     weight=0.1,
@@ -484,9 +483,9 @@ class RewardsCfg:
         func=mdp.feet_gait,
         weight=1,
         params={
-            "period": 1.0,
+            "period": 1.2,
             "offset": [0.0, 0.5],
-            "threshold": 0.55,
+            "threshold": 0.5,
             "command_name": "motion",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
         },
@@ -500,16 +499,16 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
         },
     )
-    # feet_clearance = RewTerm(
-    #     func=mdp.foot_clearance_reward,
-    #     weight=1.0,
-    #     params={
-    #         "std": 0.05,
-    #         "tanh_mult": 2.0,
-    #         "target_height": 0.1,
-    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-    #     },
-    # )
+    feet_clearance = RewTerm(
+        func=mdp.foot_clearance_reward,
+        weight=0.50,
+        params={
+            "std": 0.05,
+            "tanh_mult": 2.0,
+            "target_height": 0.1,
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+        },
+    )
 
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
