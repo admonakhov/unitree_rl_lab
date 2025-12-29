@@ -202,15 +202,15 @@ class CommandsCfg:
         heading_command=True,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.5, 1.0),
-            lin_vel_y=(-0.5, 0.5),
-            ang_vel_z=(-0.7, 0.7),
+            lin_vel_x=(-3.6, 3.7),
+            lin_vel_y=(-4.2, 3.9),
+            ang_vel_z=(-9.0, 9.5),
             heading=(-3.14159, 3.14159),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.6, 1.2),
-            lin_vel_y=(-0.6, 0.6),
-            ang_vel_z=(-1.2, 1.2),
+            lin_vel_x=(-3.6, 3.7),
+            lin_vel_y=(-4.2, 3.9),
+            ang_vel_z=(-9.0, 9.5),
             heading=(-3.14159, 3.14159),
         ),
     )
@@ -244,6 +244,7 @@ class CommandsCfg:
         },
         joint_position_range=(-0.02, 0.02),  # Further reduced for better arm tracking
         velocity_command_name="base_velocity",  # Link motion direction to velocity command for directional consistency
+        set_velocity_command=True,  # Set the velocity command to match the current mocap velocity
 
         # Bodies to track
         body_names=[
@@ -608,7 +609,7 @@ class RobotPlayEnvCfg(RobotEnvCfg):
         self.scene.terrain.terrain_generator.num_rows = 2
         self.scene.terrain.terrain_generator.num_cols = 10
         limit_ranges = mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.0, 1.5), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=(-3.14159, 3.14159),
+            lin_vel_x=(-3.6, 3.7), lin_vel_y=(-4.2, 3.9), ang_vel_z=(-9.0, 9.5), heading=(-3.14159, 3.14159),
         )
         self.commands.base_velocity.ranges = limit_ranges
 

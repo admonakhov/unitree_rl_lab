@@ -299,6 +299,14 @@ class MotionCommand(CommandTerm):
         else:
             delta_ori_w = original_delta_ori_w
 
+        if self.cfg.set_velocity_command and self.cfg.velocity_command_name is not None:
+            velocity_commands = self._env.command_manager.get_command(self.cfg.velocity_command_name)
+            # Set velocity command to current mocap anchor velocity
+            velocity_commands[:, 0] = self.anchor_lin_vel_w[:, 0]  # lin_vel_x
+            velocity_commands[:, 1] = self.anchor_lin_vel_w[:, 1]  # lin_vel_y
+            velocity_commands[:, 2] = self.anchor_ang_vel_w[:, 2]  # ang_vel_z
+            # Heading remains as set by the command generator
+
         self.body_quat_relative_w = quat_mul(delta_ori_w, self.body_quat_w)
         self.body_pos_relative_w = delta_pos_w + quat_apply(delta_ori_w, self.body_pos_w - anchor_pos_w_repeat)
 
@@ -380,6 +388,7 @@ class MotionCommandCfg(CommandTermCfg):
     adaptive_alpha: float = 0.001
 
     velocity_command_name: str | None = None  # Name of velocity command to align motion direction with
+    set_velocity_command: bool = False  # If True, set the velocity command to match the current mocap velocity
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")
     anchor_visualizer_cfg.markers["frame"].scale = (0.2, 0.2, 0.2)
