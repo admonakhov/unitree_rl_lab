@@ -1,6 +1,5 @@
-# unitree_23dof_amp_velocity_env_cfg.py
 """
-Configuration for Unitree-Arcus-A1 locomotion environment with AMP (Adversarial Motion Priors).
+Configuration for Unitree-g1-29dof locomotion environment with AMP (Adversarial Motion Priors).
 Combines velocity commands for locomotion with motion tracking from mocap data to ensure natural motion.
 """
 import math
@@ -221,7 +220,7 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file="mocap/walk12_g1_29.npz",
+        motion_file="mocap/walk12_g1_29 40.npz",
         anchor_body_name="torso_link",
         resampling_time_range=(10.0, 30.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
