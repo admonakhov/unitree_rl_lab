@@ -24,7 +24,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 
-from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_MIMIC_CFG as ROBOT_CFG
 from unitree_rl_lab.assets.robots.arcus import LEG_JOINT_NAMES
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
@@ -248,19 +248,19 @@ class CommandsCfg:
         # Bodies to track
         body_names=[
             "pelvis",
-            "torso_link",
             "left_hip_roll_link",
             "left_knee_link",
             "left_ankle_roll_link",
             "right_hip_roll_link",
             "right_knee_link",
             "right_ankle_roll_link",
+            "torso_link",
             "left_shoulder_roll_link",
             "left_elbow_link",
-            "left_wrist_roll_rubber_hand",
+            "left_wrist_yaw_link",
             "right_shoulder_roll_link",
             "right_elbow_link",
-            "right_wrist_roll_rubber_hand",
+            "right_wrist_yaw_link",
         ],
     )
 
