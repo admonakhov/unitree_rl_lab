@@ -281,6 +281,14 @@ class MotionCommand(CommandTerm):
         env_ids = torch.where(self.time_steps >= self.motion.time_step_total)[0]
         self._resample_command(env_ids)
 
+        # Get current mocap data
+        body_pos_w = self.motion.body_pos_w[self.time_steps] + self._env.scene.env_origins[:, None, :]
+        body_quat_w = self.motion.body_quat_w[self.time_steps]
+        body_lin_vel_w = self.motion.body_lin_vel_w[self.time_steps]
+        body_ang_vel_w = self.motion.body_ang_vel_w[self.time_steps]
+        joint_pos = self.motion.joint_pos[self.time_steps]
+        joint_vel = self.motion.joint_vel[self.time_steps]
+
         # Correct anchor orientation to match movement direction
         anchor_quat_w = self.anchor_quat_w.clone()
         desired_yaw_mocap = torch.atan2(self.anchor_lin_vel_w[:, 1], self.anchor_lin_vel_w[:, 0])
@@ -302,7 +310,11 @@ class MotionCommand(CommandTerm):
 
         if self.cfg.velocity_command_name is not None:
             velocity_commands = self._env.command_manager.get_command(self.cfg.velocity_command_name)
-            if self.cfg.set_velocity_command:
+            # With probability zero_command_prob, set commands to zero for balance training
+            is_zero_command = torch.rand(1, device=self.device) < self.cfg.zero_command_prob
+            if is_zero_command:
+                velocity_commands.zero_()
+            elif self.cfg.set_velocity_command:
                 # Set velocity command to current mocap anchor velocity
                 velocity_commands[:, 1] = self.anchor_lin_vel_w[:, 0]  # lin_vel_x
                 velocity_commands[:, 0] = self.anchor_lin_vel_w[:, 1]  # lin_vel_y
@@ -312,10 +324,30 @@ class MotionCommand(CommandTerm):
             desired_quat_expanded = desired_quat[:, None, :].repeat(1, len(self.cfg.body_names), 1)
             delta_ori_w = desired_quat_expanded
         else:
+            is_zero_command = torch.tensor(False, device=self.device)
             delta_ori_w = original_delta_ori_w
 
-        self.body_quat_relative_w = quat_mul(delta_ori_w, self.body_quat_w)
-        self.body_pos_relative_w = delta_pos_w + quat_apply(delta_ori_w, self.body_pos_w - anchor_pos_w_repeat)
+        # If zero command, use initial pose from mocap
+        if is_zero_command:
+            initial_anchor_pos_w = self.motion.body_pos_w[0, self.motion_anchor_body_index] + self._env.scene.env_origins
+            initial_anchor_quat_w = self.motion.body_quat_w[0, self.motion_anchor_body_index].unsqueeze(0).repeat(self.num_envs, 1)
+            initial_body_pos_w = self.motion.body_pos_w[0] + self._env.scene.env_origins[:, None, :]
+            initial_body_quat_w = self.motion.body_quat_w[0].unsqueeze(0).expand(self.num_envs, -1, -1)
+            initial_joint_pos = self.motion.joint_pos[0].unsqueeze(0).repeat(self.num_envs, 1)
+            initial_joint_vel = self.motion.joint_vel[0].unsqueeze(0).repeat(self.num_envs, 1)
+
+            # Override with initial values
+            anchor_pos_w_repeat = initial_anchor_pos_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
+            anchor_quat_w_repeat = initial_anchor_quat_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
+            body_pos_w = initial_body_pos_w
+            body_quat_w = initial_body_quat_w
+            body_lin_vel_w = torch.zeros_like(body_lin_vel_w)
+            body_ang_vel_w = torch.zeros_like(body_ang_vel_w)
+            joint_pos = initial_joint_pos
+            joint_vel = torch.zeros_like(joint_vel)
+
+        self.body_quat_relative_w = quat_mul(delta_ori_w, body_quat_w)
+        self.body_pos_relative_w = delta_pos_w + quat_apply(delta_ori_w, body_pos_w - anchor_pos_w_repeat)
 
         self.bin_failed_count = (
             self.cfg.adaptive_alpha * self._current_bin_failed + (1 - self.cfg.adaptive_alpha) * self.bin_failed_count
@@ -396,6 +428,7 @@ class MotionCommandCfg(CommandTermCfg):
 
     velocity_command_name: str | None = None  # Name of velocity command to align motion direction with
     set_velocity_command: bool = False  # If True, set the velocity command to match the current mocap velocity
+    zero_command_prob: float = 0.0  # Probability of setting velocity commands to zero (for balance training)
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")
     anchor_visualizer_cfg.markers["frame"].scale = (0.2, 0.2, 0.2)
