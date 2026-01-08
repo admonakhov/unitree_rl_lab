@@ -281,8 +281,18 @@ class MotionCommand(CommandTerm):
         env_ids = torch.where(self.time_steps >= self.motion.time_step_total)[0]
         self._resample_command(env_ids)
 
+        # Correct anchor orientation to match movement direction
+        anchor_quat_w = self.anchor_quat_w.clone()
+        desired_yaw_mocap = torch.atan2(self.anchor_lin_vel_w[:, 1], self.anchor_lin_vel_w[:, 0])
+        # Extract current yaw from quaternion: atan2(2*(w*z + x*y), 1 - 2*(y^2 + z^2))
+        w, x, y, z = anchor_quat_w[:, 0], anchor_quat_w[:, 1], anchor_quat_w[:, 2], anchor_quat_w[:, 3]
+        current_yaw = torch.atan2(2 * (w * z + x * y), 1 - 2 * (y**2 + z**2))
+        delta_yaw = desired_yaw_mocap - current_yaw
+        correction_quat = torch.stack([torch.cos(delta_yaw * 0.5), torch.zeros_like(delta_yaw), torch.zeros_like(delta_yaw), torch.sin(delta_yaw * 0.5)], dim=-1)
+        anchor_quat_w = quat_mul(correction_quat, anchor_quat_w)
+
         anchor_pos_w_repeat = self.anchor_pos_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
-        anchor_quat_w_repeat = self.anchor_quat_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
+        anchor_quat_w_repeat = anchor_quat_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
         robot_anchor_pos_w_repeat = self.robot_anchor_pos_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
         robot_anchor_quat_w_repeat = self.robot_anchor_quat_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
 
@@ -294,14 +304,13 @@ class MotionCommand(CommandTerm):
             velocity_commands = self._env.command_manager.get_command(self.cfg.velocity_command_name)
             if self.cfg.set_velocity_command:
                 # Set velocity command to current mocap anchor velocity
-                velocity_commands[:, 0] = self.anchor_lin_vel_w[:, 0]  # lin_vel_x
-                velocity_commands[:, 1] = self.anchor_lin_vel_w[:, 1]  # lin_vel_y
+                velocity_commands[:, 1] = self.anchor_lin_vel_w[:, 0]  # lin_vel_x
+                velocity_commands[:, 0] = self.anchor_lin_vel_w[:, 1]  # lin_vel_y
                 velocity_commands[:, 2] = self.anchor_ang_vel_w[:, 2]  # ang_vel_z
-                velocity_commands[:, 3] = torch.atan2(self.anchor_lin_vel_w[:, 1], self.anchor_lin_vel_w[:, 0])  # heading
             desired_yaw = torch.atan2(velocity_commands[:, 1], velocity_commands[:, 0])  # atan2(lin_vel_y, lin_vel_x)
             desired_quat = torch.stack([torch.cos(desired_yaw * 0.5), torch.zeros_like(desired_yaw), torch.zeros_like(desired_yaw), torch.sin(desired_yaw * 0.5)], dim=-1)
             desired_quat_expanded = desired_quat[:, None, :].repeat(1, len(self.cfg.body_names), 1)
-            delta_ori_w = quat_mul(desired_quat_expanded, original_delta_ori_w)
+            delta_ori_w = desired_quat_expanded
         else:
             delta_ori_w = original_delta_ori_w
 
