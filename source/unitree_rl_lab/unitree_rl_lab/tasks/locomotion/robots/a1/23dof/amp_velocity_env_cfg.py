@@ -246,7 +246,7 @@ class CommandsCfg:
         joint_position_range=(-0.02, 0.02),  # Further reduced for better arm tracking
         velocity_command_name="base_velocity",  # Link motion direction to velocity command for directional consistency
         set_velocity_command=True,  # Set the velocity command to match the current mocap velocity
-        zero_command_prob=0.2 # probability of zero velocity commands for balance training
+        zero_command_prob=0.2,  # 10% probability of zero velocity commands for balance training
 
         # Bodies to track
         body_names=[
