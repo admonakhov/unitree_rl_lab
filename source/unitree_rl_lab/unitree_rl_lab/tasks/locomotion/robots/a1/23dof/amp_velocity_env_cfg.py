@@ -195,16 +195,16 @@ class CommandsCfg:
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
         # allow more frequent resampling to improve responsiveness when turning
-        resampling_time_range=(5.0, 100.0),
+        resampling_time_range=(5.0, 20.0),
         rel_standing_envs=0.2,
         rel_heading_envs=0.2,
         # enable heading command so policy receives/uses target heading
         heading_command=True,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-3.6, 3.7),
-            lin_vel_y=(-4.2, 3.9),
-            ang_vel_z=(-9.0, 9.5),
+            lin_vel_x=(-0, 0),
+            lin_vel_y=(-0, 0),
+            ang_vel_z=(-0, 0),
             heading=(-3.14159, 3.14159),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
@@ -223,7 +223,7 @@ class CommandsCfg:
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
         motion_file="mocap/arcus/walk23.npz",
         anchor_body_name="torso_link",
-        resampling_time_range=(10.0, 100.0),  # Enable resampling to allow motion changes with velocity commands
+        resampling_time_range=(10.0, 20.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
 
         # Pose randomization ranges - increased yaw for different directions
