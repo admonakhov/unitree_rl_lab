@@ -195,7 +195,7 @@ class CommandsCfg:
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
         # allow more frequent resampling to improve responsiveness when turning
-        resampling_time_range=(5.0, 30.0),
+        resampling_time_range=(5.0, 100.0),
         rel_standing_envs=0.2,
         rel_heading_envs=0.2,
         # enable heading command so policy receives/uses target heading
@@ -221,10 +221,11 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file="mocap/arcus/walk12.npz",
+        motion_file="mocap/arcus/walk23.npz",
         anchor_body_name="torso_link",
-        resampling_time_range=(10.0, 30.0),  # Enable resampling to allow motion changes with velocity commands
+        resampling_time_range=(10.0, 100.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
+
         # Pose randomization ranges - increased yaw for different directions
         pose_range={
             "x": (-0.03, 0.03),
@@ -343,13 +344,13 @@ class RewardsCfg:
     # -- Velocity tracking task rewards (adjusted since motion tracking is now stronger)
     track_lin_vel_xy = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_exp,
-        weight=3.0,  # Slightly reduced to balance with stronger motion tracking
+        weight=2.0,  # Slightly reduced to balance with stronger motion tracking
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
     # stronger angular velocity tracking to improve turning behavior
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp,
-        weight=1.5, 
+        weight=1, 
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
@@ -363,36 +364,72 @@ class RewardsCfg:
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*"])},
     )
 
+
+    feet_slide = RewTerm(
+        func=mdp.feet_slide,
+        weight=-0.15,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        },
+    )
+    feet_clearance = RewTerm(
+        func=mdp.foot_clearance_reward,
+        weight=0.8,
+        params={
+            "std": 0.05,
+            "tanh_mult": 2.0,
+            "target_height": 0.1,
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+        },
+    )
+
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2)
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-5, params={"target_height": 0.75})
+    alive = RewTerm(func=mdp.is_alive, weight=0.05)
+    # feet-related rewards
+    gait = RewTerm(
+        func=mdp.feet_gait,
+        weight=1,
+        params={
+            "period": 1.,
+            "offset": [0.0, 0.5],
+            "threshold": 0.5,
+            "command_name": "base_velocity",
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        },
+    )
+
     # -- tracking
-    motion_global_anchor_pos = RewTerm(
-        func=mimic_mdp.motion_global_anchor_position_error_exp,
-        weight=0.5,
-        params={"command_name": "motion", "std": 0.3},
-    )
-    motion_global_anchor_ori = RewTerm(
-        func=mimic_mdp.motion_global_anchor_orientation_error_exp,
-        weight=0.5,
-        params={"command_name": "motion", "std": 0.4},
-    )
+    # motion_global_anchor_pos = RewTerm(
+    #     func=mimic_mdp.motion_global_anchor_position_error_exp,
+    #     weight=0.5,
+    #     params={"command_name": "motion", "std": 0.3},
+    # )
+    # motion_global_anchor_ori = RewTerm(
+    #     func=mimic_mdp.motion_global_anchor_orientation_error_exp,
+    #     weight=0.5,
+    #     params={"command_name": "motion", "std": 0.4},
+    # )
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
-        weight=1.0,
-        params={"command_name": "motion", "std": 0.3},
+        weight=3.0,
+        params={"command_name": "motion", "std": 0.1},
     )
     motion_body_ori = RewTerm(
         func=mimic_mdp.motion_relative_body_orientation_error_exp,
-        weight=1.0,
-        params={"command_name": "motion", "std": 0.4},
+        weight=2.5,
+        params={"command_name": "motion", "std": 0.2},
     )
     motion_body_lin_vel = RewTerm(
         func=mimic_mdp.motion_global_body_linear_velocity_error_exp,
-        weight=1.0,
-        params={"command_name": "motion", "std": 1.0},
+        weight=1.5,
+        params={"command_name": "motion", "std": 0.5},
     )
     motion_body_ang_vel = RewTerm(
         func=mimic_mdp.motion_global_body_angular_velocity_error_exp,
         weight=1.0,
-        params={"command_name": "motion", "std": 3.14},
+        params={"command_name": "motion", "std": 3.14/4},
     )
 
     undesired_contacts = RewTerm(
@@ -459,7 +496,7 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 4
-        self.episode_length_s = 20.0
+        self.episode_length_s = 100.0
 
         # simulation settings
         self.sim.dt = 0.005
