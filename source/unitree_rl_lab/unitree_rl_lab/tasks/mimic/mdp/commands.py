@@ -292,20 +292,18 @@ class MotionCommand(CommandTerm):
 
         if self.cfg.velocity_command_name is not None:
             velocity_commands = self._env.command_manager.get_command(self.cfg.velocity_command_name)
+            if self.cfg.set_velocity_command:
+                # Set velocity command to current mocap anchor velocity
+                velocity_commands[:, 0] = self.anchor_lin_vel_w[:, 0]  # lin_vel_x
+                velocity_commands[:, 1] = self.anchor_lin_vel_w[:, 1]  # lin_vel_y
+                velocity_commands[:, 2] = self.anchor_ang_vel_w[:, 2]  # ang_vel_z
+                velocity_commands[:, 3] = torch.atan2(self.anchor_lin_vel_w[:, 1], self.anchor_lin_vel_w[:, 0])  # heading
             desired_yaw = torch.atan2(velocity_commands[:, 1], velocity_commands[:, 0])  # atan2(lin_vel_y, lin_vel_x)
             desired_quat = torch.stack([torch.cos(desired_yaw * 0.5), torch.zeros_like(desired_yaw), torch.zeros_like(desired_yaw), torch.sin(desired_yaw * 0.5)], dim=-1)
             desired_quat_expanded = desired_quat[:, None, :].repeat(1, len(self.cfg.body_names), 1)
             delta_ori_w = quat_mul(desired_quat_expanded, original_delta_ori_w)
         else:
             delta_ori_w = original_delta_ori_w
-
-        if self.cfg.set_velocity_command and self.cfg.velocity_command_name is not None:
-            velocity_commands = self._env.command_manager.get_command(self.cfg.velocity_command_name)
-            # Set velocity command to current mocap anchor velocity
-            velocity_commands[:, 0] = self.anchor_lin_vel_w[:, 0]  # lin_vel_x
-            velocity_commands[:, 1] = self.anchor_lin_vel_w[:, 1]  # lin_vel_y
-            velocity_commands[:, 2] = self.anchor_ang_vel_w[:, 2]  # ang_vel_z
-            # Heading remains as set by the command generator
 
         self.body_quat_relative_w = quat_mul(delta_ori_w, self.body_quat_w)
         self.body_pos_relative_w = delta_pos_w + quat_apply(delta_ori_w, self.body_pos_w - anchor_pos_w_repeat)
