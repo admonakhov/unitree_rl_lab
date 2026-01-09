@@ -226,14 +226,14 @@ class CommandsCfg:
         resampling_time_range=(10.0, 20.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
 
-        # Pose randomization ranges - increased yaw for different directions
+
         pose_range={
             "x": (-0.03, 0.03),
             "y": (-0.03, 0.03),
-            "z": (-0.005, 0.005),
+            "z": (-0.000, 0.000),
             "roll": (-0.05, 0.05),
             "pitch": (-0.05, 0.05),
-            "yaw": (-0.5, 0.5),  # Increased from (-0.1, 0.1) for more directional variety
+            "yaw": (-0.0, 0.0),  # Increased from (-0.1, 0.1) for more directional variety
         },
         velocity_range={
             "x": (-0.3, 0.3),
@@ -246,7 +246,7 @@ class CommandsCfg:
         joint_position_range=(-0.02, 0.02),  # Further reduced for better arm tracking
         velocity_command_name="base_velocity",  # Link motion direction to velocity command for directional consistency
         set_velocity_command=True,  # Set the velocity command to match the current mocap velocity
-        zero_command_prob=0.2,  # 10% probability of zero velocity commands for balance training
+        zero_command_prob=0.1,  # Probability of setting velocity commands to zero (for balance training)
 
         # Bodies to track
         body_names=[
