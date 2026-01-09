@@ -307,8 +307,8 @@ class MotionCommand(CommandTerm):
             elif self.cfg.set_velocity_command:
                 # Transform mocap velocity to mocap anchor's local frame
                 local_lin_vel = quat_apply(quat_inv(self.anchor_quat_w), self.anchor_lin_vel_w)
-                velocity_commands[:, 0] = local_lin_vel[:, 0] / 2 # lin_vel_x (forward/backward in mocap frame)
-                velocity_commands[:, 1] = local_lin_vel[:, 1] / 2 # lin_vel_y (left/right in mocap frame)
+                velocity_commands[:, 0] = local_lin_vel[:, 0]  # lin_vel_x (forward/backward in mocap frame)
+                velocity_commands[:, 1] = local_lin_vel[:, 1]  # lin_vel_y (left/right in mocap frame)
                 velocity_commands[:, 2] = self.anchor_ang_vel_w[:, 2]  # ang_vel_z (local angular velocity)
             # Use original delta orientation (frames oriented relative to robot's current pose)
             delta_ori_w = original_delta_ori_w

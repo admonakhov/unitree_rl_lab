@@ -221,7 +221,7 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file="mocap/arcus/walk12.npz",
+        motion_file="mocap/arcus/walk21.npz",
         anchor_body_name="torso_link",
         resampling_time_range=(10.0, 20.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
@@ -366,27 +366,27 @@ class RewardsCfg:
     )
 
 
-    feet_slide = RewTerm(
-        func=mdp.feet_slide,
-        weight=-0.15,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
-        },
-    )
-    feet_clearance = RewTerm(
-        func=mdp.foot_clearance_reward,
-        weight=0.8,
-        params={
-            "std": 0.05,
-            "tanh_mult": 2.0,
-            "target_height": 0.1,
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-        },
-    )
+    # feet_slide = RewTerm(
+    #     func=mdp.feet_slide,
+    #     weight=-0.15,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+    #     },
+    # )
+    # feet_clearance = RewTerm(
+    #     func=mdp.foot_clearance_reward,
+    #     weight=0.8,
+    #     params={
+    #         "std": 0.05,
+    #         "tanh_mult": 2.0,
+    #         "target_height": 0.1,
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+    #     },
+    # )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-5, params={"target_height": 0.75})
+    # base_height = RewTerm(func=mdp.base_height_l2, weight=-5, params={"target_height": 0.75})
     alive = RewTerm(func=mdp.is_alive, weight=0.05)
     # feet-related rewards
     gait = RewTerm(
