@@ -71,13 +71,32 @@ class MotionCommand(CommandTerm):
             self.robot.find_bodies(self.cfg.body_names, preserve_order=True)[0], dtype=torch.long, device=self.device
         )
 
-        self.motion = MotionLoader(self.cfg.motion_file, self.body_indexes, device=self.device)
+        # Support single motion file or list of motion files
+        motion_files = self.cfg.motion_file if isinstance(self.cfg.motion_file, (list, tuple)) else [self.cfg.motion_file]
+        self.motions = [MotionLoader(f, self.body_indexes, device=self.device) for f in motion_files]
+        # Per-env selected motion index
+        if len(self.motions) == 1:
+            self.motion_ids = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+        else:
+            # motion assignment strategy: 'round_robin' or 'random'
+            if getattr(self.cfg, "motion_assignment", "round_robin") == "random":
+                self.motion_ids = torch.randint(len(self.motions), (self.num_envs,), device=self.device)
+            else:
+                # deterministic round-robin distribution across envs so each env uses one mocap
+                self.motion_ids = (torch.arange(self.num_envs, device=self.device) % len(self.motions)).long()
+
+        # Per-env time step within chosen motion
         self.time_steps = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
+
+        # helper: motion lengths
+        self.motion_lengths = torch.tensor([m.time_step_total for m in self.motions], device=self.device)
         self.body_pos_relative_w = torch.zeros(self.num_envs, len(cfg.body_names), 3, device=self.device)
         self.body_quat_relative_w = torch.zeros(self.num_envs, len(cfg.body_names), 4, device=self.device)
         self.body_quat_relative_w[:, :, 0] = 1.0
 
-        self.bin_count = int(self.motion.time_step_total // (1 / (env.cfg.decimation * env.cfg.sim.dt))) + 1
+        # Use maximum motion length to determine binning for adaptive sampling
+        max_motion_len = int(self.motion_lengths.max().item())
+        self.bin_count = int(max_motion_len // (1 / (env.cfg.decimation * env.cfg.sim.dt))) + 1
         self.bin_failed_count = torch.zeros(self.bin_count, dtype=torch.float, device=self.device)
         self._current_bin_failed = torch.zeros(self.bin_count, dtype=torch.float, device=self.device)
         self.kernel = torch.tensor(
@@ -97,49 +116,99 @@ class MotionCommand(CommandTerm):
         self.metrics["sampling_top1_prob"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["sampling_top1_bin"] = torch.zeros(self.num_envs, device=self.device)
 
+        # Smoothed velocity command (for optional EMA smoothing)
+        self.velocity_command_smoothed = torch.zeros(self.num_envs, 3, device=self.device)
+
     @property
     def command(self) -> torch.Tensor:  # TODO Consider again if this is the best observation
         return torch.cat([self.joint_pos, self.joint_vel], dim=1)
 
     @property
     def joint_pos(self) -> torch.Tensor:
-        return self.motion.joint_pos[self.time_steps]
+        # Gather joint positions per-env from assigned motions
+        return self._gather_motion_attr("joint_pos")
 
     @property
     def joint_vel(self) -> torch.Tensor:
-        return self.motion.joint_vel[self.time_steps]
+        return self._gather_motion_attr("joint_vel")
 
     @property
     def body_pos_w(self) -> torch.Tensor:
-        return self.motion.body_pos_w[self.time_steps] + self._env.scene.env_origins[:, None, :]
+        return self._gather_motion_attr("body_pos_w") + self._env.scene.env_origins[:, None, :]
 
     @property
     def body_quat_w(self) -> torch.Tensor:
-        return self.motion.body_quat_w[self.time_steps]
+        return self._gather_motion_attr("body_quat_w")
 
     @property
     def body_lin_vel_w(self) -> torch.Tensor:
-        return self.motion.body_lin_vel_w[self.time_steps]
+        return self._gather_motion_attr("body_lin_vel_w")
 
     @property
     def body_ang_vel_w(self) -> torch.Tensor:
-        return self.motion.body_ang_vel_w[self.time_steps]
+        return self._gather_motion_attr("body_ang_vel_w")
 
     @property
     def anchor_pos_w(self) -> torch.Tensor:
-        return self.motion.body_pos_w[self.time_steps, self.motion_anchor_body_index] + self._env.scene.env_origins
+        # select anchor body position per env
+        bp = self._gather_motion_attr("body_pos_w")
+        return bp[:, self.motion_anchor_body_index] + self._env.scene.env_origins
 
     @property
     def anchor_quat_w(self) -> torch.Tensor:
-        return self.motion.body_quat_w[self.time_steps, self.motion_anchor_body_index]
+        bq = self._gather_motion_attr("body_quat_w")
+        return bq[:, self.motion_anchor_body_index]
 
     @property
     def anchor_lin_vel_w(self) -> torch.Tensor:
-        return self.motion.body_lin_vel_w[self.time_steps, self.motion_anchor_body_index]
+        bl = self._gather_motion_attr("body_lin_vel_w")
+        return bl[:, self.motion_anchor_body_index]
 
     @property
     def anchor_ang_vel_w(self) -> torch.Tensor:
-        return self.motion.body_ang_vel_w[self.time_steps, self.motion_anchor_body_index]
+        ba = self._gather_motion_attr("body_ang_vel_w")
+        return ba[:, self.motion_anchor_body_index]
+
+    def _gather_motion_attr(self, attr_name: str) -> torch.Tensor:
+        """Assemble per-env tensor for given motion attribute (e.g. 'joint_pos', 'body_pos_w').
+
+        Each MotionLoader stores data as [T, ...]. This returns a tensor shaped
+        (num_envs, ...) where each env pulls from its assigned motion at
+        the per-env time index in `self.time_steps`.
+        """
+        out = None
+        device = self.device
+        for i, m in enumerate(self.motions):
+            idxs = (self.motion_ids == i).nonzero(as_tuple=True)[0]
+            if idxs.numel() == 0:
+                continue
+            vals = getattr(m, attr_name)[self.time_steps[idxs]]
+            if out is None:
+                out = torch.zeros((self.num_envs,) + vals.shape[1:], device=device, dtype=vals.dtype)
+            out[idxs] = vals
+        if out is None:
+            # no envs assigned? return empty tensor shaped for num_envs
+            # attempt to construct from first motion's attr
+            sample = getattr(self.motions[0], attr_name)
+            out = torch.zeros((self.num_envs,) + sample.shape[1:], device=device, dtype=sample.dtype)
+        return out
+
+    def _gather_motion_initial(self, attr_name: str) -> torch.Tensor:
+        """Return per-env initial (t=0) attribute from assigned motions."""
+        out = None
+        device = self.device
+        for i, m in enumerate(self.motions):
+            idxs = (self.motion_ids == i).nonzero(as_tuple=True)[0]
+            if idxs.numel() == 0:
+                continue
+            vals = getattr(m, attr_name)[0]
+            if out is None:
+                out = torch.zeros((self.num_envs,) + vals.shape, device=device, dtype=vals.dtype)
+            out[idxs] = vals.unsqueeze(0).expand(len(idxs), *vals.shape)
+        if out is None:
+            sample = getattr(self.motions[0], attr_name)[0]
+            out = torch.zeros((self.num_envs,) + sample.shape, device=device, dtype=sample.dtype)
+        return out
 
     @property
     def robot_joint_pos(self) -> torch.Tensor:
@@ -207,9 +276,9 @@ class MotionCommand(CommandTerm):
     def _adaptive_sampling(self, env_ids: Sequence[int]):
         episode_failed = self._env.termination_manager.terminated[env_ids]
         if torch.any(episode_failed):
-            current_bin_index = torch.clamp(
-                (self.time_steps * self.bin_count) // max(self.motion.time_step_total, 1), 0, self.bin_count - 1
-            )
+            # per-env motion lengths
+            lengths_per_env = self.motion_lengths[self.motion_ids]
+            current_bin_index = torch.clamp((self.time_steps * self.bin_count) // lengths_per_env.clamp(min=1), 0, self.bin_count - 1)
             fail_bins = current_bin_index[env_ids][episode_failed]
             self._current_bin_failed[:] = torch.bincount(fail_bins, minlength=self.bin_count)
 
@@ -226,10 +295,10 @@ class MotionCommand(CommandTerm):
 
         sampled_bins = torch.multinomial(sampling_probabilities, len(env_ids), replacement=True)
 
+        # compute per-env motion lengths for selected envs and map sampled bin to time_steps
+        lengths = self.motion_lengths[self.motion_ids[env_ids]]
         self.time_steps[env_ids] = (
-            (sampled_bins + sample_uniform(0.0, 1.0, (len(env_ids),), device=self.device))
-            / self.bin_count
-            * (self.motion.time_step_total - 1)
+            (sampled_bins + sample_uniform(0.0, 1.0, (len(env_ids),), device=self.device)) / self.bin_count * (lengths - 1)
         ).long()
 
         # Metrics
@@ -278,16 +347,18 @@ class MotionCommand(CommandTerm):
 
     def _update_command(self):
         self.time_steps += 1
-        env_ids = torch.where(self.time_steps >= self.motion.time_step_total)[0]
+        # detect envs that reached the end of their assigned motion
+        lengths_per_env = self.motion_lengths[self.motion_ids]
+        env_ids = torch.where(self.time_steps >= lengths_per_env)[0]
         self._resample_command(env_ids)
 
-        # Get current mocap data
-        body_pos_w = self.motion.body_pos_w[self.time_steps] + self._env.scene.env_origins[:, None, :]
-        body_quat_w = self.motion.body_quat_w[self.time_steps]
-        body_lin_vel_w = self.motion.body_lin_vel_w[self.time_steps]
-        body_ang_vel_w = self.motion.body_ang_vel_w[self.time_steps]
-        joint_pos = self.motion.joint_pos[self.time_steps]
-        joint_vel = self.motion.joint_vel[self.time_steps]
+        # Get current mocap data (assembled per-env across motions)
+        body_pos_w = self.body_pos_w
+        body_quat_w = self.body_quat_w
+        body_lin_vel_w = self.body_lin_vel_w
+        body_ang_vel_w = self.body_ang_vel_w
+        joint_pos = self.joint_pos
+        joint_vel = self.joint_vel
 
         anchor_pos_w_repeat = self.anchor_pos_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
         anchor_quat_w_repeat = self.anchor_quat_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
@@ -304,12 +375,21 @@ class MotionCommand(CommandTerm):
             is_zero_command = torch.rand(1, device=self.device) < self.cfg.zero_command_prob
             if is_zero_command:
                 velocity_commands.zero_()
+                # reset smoothed velocity when forcing zero commands
+                self.velocity_command_smoothed.zero_()
             elif self.cfg.set_velocity_command:
                 # Transform mocap velocity to mocap anchor's local frame
                 local_lin_vel = quat_apply(quat_inv(self.anchor_quat_w), self.anchor_lin_vel_w)
-                velocity_commands[:, 0] = local_lin_vel[:, 0]  # lin_vel_x (forward/backward in mocap frame)
-                velocity_commands[:, 1] = local_lin_vel[:, 1]  # lin_vel_y (left/right in mocap frame)
-                velocity_commands[:, 2] = self.anchor_ang_vel_w[:, 2]  # ang_vel_z (local angular velocity)
+                # target velocity from mocap (local frame): [lin_x, lin_y, ang_z]
+                target_vel = torch.stack(
+                    (local_lin_vel[:, 0], local_lin_vel[:, 1], self.anchor_ang_vel_w[:, 2]), dim=1
+                )
+                # Exponential moving average smoothing: new = alpha * prev + (1-alpha) * target
+                self.velocity_command_smoothed = (
+                    self.cfg.velocity_smoothing_alpha * self.velocity_command_smoothed
+                    + (1.0 - self.cfg.velocity_smoothing_alpha) * target_vel
+                )
+                velocity_commands[:, :3] = self.velocity_command_smoothed
             # Use original delta orientation (frames oriented relative to robot's current pose)
             delta_ori_w = original_delta_ori_w
         else:
@@ -318,12 +398,14 @@ class MotionCommand(CommandTerm):
 
         # If zero command, use initial pose from mocap
         if is_zero_command:
-            initial_anchor_pos_w = self.motion.body_pos_w[0, self.motion_anchor_body_index] + self._env.scene.env_origins
-            initial_anchor_quat_w = self.motion.body_quat_w[0, self.motion_anchor_body_index].unsqueeze(0).repeat(self.num_envs, 1)
-            initial_body_pos_w = self.motion.body_pos_w[0] + self._env.scene.env_origins[:, None, :]
-            initial_body_quat_w = self.motion.body_quat_w[0].unsqueeze(0).expand(self.num_envs, -1, -1)
-            initial_joint_pos = self.motion.joint_pos[0].unsqueeze(0).repeat(self.num_envs, 1)
-            initial_joint_vel = self.motion.joint_vel[0].unsqueeze(0).repeat(self.num_envs, 1)
+            initial_body_pos = self._gather_motion_initial("body_pos_w")
+            initial_body_quat = self._gather_motion_initial("body_quat_w")
+            initial_joint_pos = self._gather_motion_initial("joint_pos")
+            initial_joint_vel = self._gather_motion_initial("joint_vel")
+            initial_anchor_pos_w = initial_body_pos[:, self.motion_anchor_body_index] + self._env.scene.env_origins
+            initial_anchor_quat_w = initial_body_quat[:, self.motion_anchor_body_index]
+            initial_body_pos_w = initial_body_pos + self._env.scene.env_origins[:, None, :]
+            initial_body_quat_w = initial_body_quat
 
             # Override with initial values
             anchor_pos_w_repeat = initial_anchor_pos_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
@@ -333,7 +415,7 @@ class MotionCommand(CommandTerm):
             body_lin_vel_w = torch.zeros_like(body_lin_vel_w)
             body_ang_vel_w = torch.zeros_like(body_ang_vel_w)
             joint_pos = initial_joint_pos
-            joint_vel = torch.zeros_like(joint_vel)
+            joint_vel = torch.zeros_like(initial_joint_vel)
 
         self.body_quat_relative_w = quat_mul(delta_ori_w, body_quat_w)
         self.body_pos_relative_w = delta_pos_w + quat_apply(delta_ori_w, body_pos_w - anchor_pos_w_repeat)
@@ -401,7 +483,7 @@ class MotionCommandCfg(CommandTermCfg):
 
     asset_name: str = MISSING
 
-    motion_file: str = MISSING
+    motion_file: str | list[str] = MISSING
     anchor_body_name: str = MISSING
     body_names: list[str] = MISSING
 
@@ -418,6 +500,8 @@ class MotionCommandCfg(CommandTermCfg):
     velocity_command_name: str | None = None  # Name of velocity command to align motion direction with
     set_velocity_command: bool = False  # If True, set the velocity command to match the current mocap velocity
     zero_command_prob: float = 0.0  # Probability of setting velocity commands to zero (for balance training)
+    velocity_smoothing_alpha: float = 0.9  # EMA alpha for smoothing velocity commands (0..1)
+    motion_assignment: str = "round_robin"  # 'round_robin' or 'random' per-env motion file assignment
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")
     anchor_visualizer_cfg.markers["frame"].scale = (0.2, 0.2, 0.2)

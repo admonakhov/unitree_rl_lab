@@ -23,7 +23,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 
-from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_MIMIC_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
 from unitree_rl_lab.assets.robots.arcus import LEG_JOINT_NAMES
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
@@ -201,16 +201,16 @@ class CommandsCfg:
         heading_command=True,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-3.6, 3.7),
-            lin_vel_y=(-4.2, 3.9),
-            ang_vel_z=(-9.0, 9.5),
-            heading=(-3.14159, 3.14159),
+            lin_vel_x=(-0.5, 1.5),
+            lin_vel_y=(-0.5, 0.5),
+            ang_vel_z=(-0.3, 0.3),
+            heading=(-1.7, 1.7),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-3.6, 3.7),
-            lin_vel_y=(-4.2, 3.9),
-            ang_vel_z=(-9.0, 9.5),
-            heading=(-3.14159, 3.14159),
+            lin_vel_x=(-1, 2.5),
+            lin_vel_y=(-0.75, 0.75),
+            ang_vel_z=(-0.5, 0.5),
+            heading=(-3.14, 3.14),
         ),
     )
 
@@ -220,7 +220,7 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file="mocap/walk12_g1_29 40.npz",
+        motion_file=["mocap/g1/walk_and_stand.npz", "mocap/g1/female_moving_forward.npz"],
         anchor_body_name="torso_link",
         resampling_time_range=(10.0, 30.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
