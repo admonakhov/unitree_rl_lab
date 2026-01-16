@@ -22,9 +22,8 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-
+from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_MIMIC_ACTION_SCALE
 from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
-from unitree_rl_lab.assets.robots.arcus import LEG_JOINT_NAMES
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
 from unitree_rl_lab.tasks.mimic.mdp.commands import MotionCommandCfg
@@ -49,6 +48,17 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
         ),
     },
 )
+
+
+VELOCITY_RANGE = {
+    "x": (-0.5, 0.5),
+    "y": (-0.5, 0.5),
+    "z": (-0.2, 0.2),
+    "roll": (-0.52, 0.52),
+    "pitch": (-0.52, 0.52),
+    "yaw": (-0.78, 0.78),
+}
+
 
 # -----------------------
 # Scene
@@ -110,76 +120,43 @@ class RobotSceneCfg(InteractiveSceneCfg):
 @configclass
 class EventCfg:
     """Configuration for events."""
-
-    # startup randomize physics materials on robot bodies
     physics_material = EventTerm(
-        func=mdp.randomize_rigid_body_material,
+        func=mimic_mdp.randomize_rigid_body_material,
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.0),
-            "dynamic_friction_range": (0.3, 1.0),
-            "restitution_range": (0.0, 0.0),
+            "static_friction_range": (0.3, 1.6),
+            "dynamic_friction_range": (0.3, 1.2),
+            "restitution_range": (0.0, 0.5),
             "num_buckets": 64,
         },
     )
 
-    # add a bit of base mass variation (startup)
-    add_base_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
+    add_joint_default_pos = EventTerm(
+        func=mimic_mdp.randomize_joint_default_pos,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "mass_distribution_params": (-1.0, 3.0),
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+            "pos_distribution_params": (-0.01, 0.01),
             "operation": "add",
         },
     )
 
-    # reset: external force/torque
-    base_external_force_torque = EventTerm(
-        func=mdp.apply_external_force_torque,
-        mode="reset",
+    base_com = EventTerm(
+        func=mimic_mdp.randomize_rigid_body_com,
+        mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "force_range": (0.0, 0.0),
-            "torque_range": (-0.0, 0.0),
+            "com_range": {"x": (-0.025, 0.025), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
         },
     )
 
-    # reset base pose и скорость
-    reset_base = EventTerm(
-        func=mdp.reset_root_state_uniform,
-        mode="reset",
-        params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
-            "velocity_range": {
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
-            },
-        },
-    )
-
-    # reset joints
-    reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_by_scale,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "position_range": (1.0, 1.0),
-            "velocity_range": (-0.5, 0.5),
-        },
-    )
-
-    # периодические толчки
+    # interval
     push_robot = EventTerm(
-        func=mdp.push_by_setting_velocity,
+        func=mimic_mdp.push_by_setting_velocity,
         mode="interval",
-        interval_range_s=(5.0, 5.0),
-        params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
+        interval_range_s=(1.0, 3.0),
+        params={"velocity_range": VELOCITY_RANGE},
     )
 
 
@@ -273,7 +250,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=UNITREE_G1_29DOF_MIMIC_ACTION_SCALE, use_default_offset=True
     )
 
 
@@ -466,7 +443,7 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # general settings
         self.decimation = 4
-        self.episode_length_s = 20.0
+        self.episode_length_s = 30.0
 
         # simulation settings
         self.sim.dt = 0.005
