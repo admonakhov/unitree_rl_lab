@@ -220,7 +220,7 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file=["mocap/g1/walk_and_stand.npz", "mocap/g1/female_moving_forward.npz"],
+        motion_file=["mocap/g1/comp.npz", "mocap/g1/female_moving_forward.npz"],
         anchor_body_name="torso_link",
         resampling_time_range=(10.0, 30.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
@@ -353,44 +353,53 @@ class RewardsCfg:
     )
 
     # -- base
-    joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    # joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-1e-1)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-2e-2)
     joint_limit = RewTerm(
         func=mdp.joint_pos_limits,
         weight=-10.0,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*"])},
     )
 
+    feet_slide = RewTerm(
+        func=mdp.feet_slide,
+        weight=-0.2,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        },
+    )
+
     # -- tracking
-    motion_global_anchor_pos = RewTerm(
-        func=mimic_mdp.motion_global_anchor_position_error_exp,
-        weight=0.5,
-        params={"command_name": "motion", "std": 0.3},
-    )
-    motion_global_anchor_ori = RewTerm(
-        func=mimic_mdp.motion_global_anchor_orientation_error_exp,
-        weight=0.5,
-        params={"command_name": "motion", "std": 0.4},
-    )
+    # motion_global_anchor_pos = RewTerm(
+    #     func=mimic_mdp.motion_global_anchor_position_error_exp,
+    #     weight=0.5,
+    #     params={"command_name": "motion", "std": 0.3},
+    # )
+    # motion_global_anchor_ori = RewTerm(
+    #     func=mimic_mdp.motion_global_anchor_orientation_error_exp,
+    #     weight=0.5,
+    #     params={"command_name": "motion", "std": 0.4},
+    # )
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
-        weight=1.0,
+        weight=0.2,
         params={"command_name": "motion", "std": 0.3},
     )
     motion_body_ori = RewTerm(
         func=mimic_mdp.motion_relative_body_orientation_error_exp,
-        weight=1.0,
+        weight=0.2,
         params={"command_name": "motion", "std": 0.4},
     )
     motion_body_lin_vel = RewTerm(
         func=mimic_mdp.motion_global_body_linear_velocity_error_exp,
-        weight=1.0,
+        weight=0.2,
         params={"command_name": "motion", "std": 1.0},
     )
     motion_body_ang_vel = RewTerm(
         func=mimic_mdp.motion_global_body_angular_velocity_error_exp,
-        weight=1.0,
+        weight=0.2,
         params={"command_name": "motion", "std": 3.14},
     )
 
