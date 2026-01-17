@@ -348,18 +348,20 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
         },
     )
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.5)
+
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.2)
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.78})
     # -- tracking
-    # motion_global_anchor_pos = RewTerm(
-    #     func=mimic_mdp.motion_global_anchor_position_error_exp,
-    #     weight=0.5,
-    #     params={"command_name": "motion", "std": 0.3},
-    # )
-    # motion_global_anchor_ori = RewTerm(
-    #     func=mimic_mdp.motion_global_anchor_orientation_error_exp,
-    #     weight=0.5,
-    #     params={"command_name": "motion", "std": 0.4},
-    # )
+    motion_global_anchor_pos = RewTerm(
+        func=mimic_mdp.motion_global_anchor_position_error_exp,
+        weight=0.1,
+        params={"command_name": "motion", "std": 0.3},
+    )
+    motion_global_anchor_ori = RewTerm(
+        func=mimic_mdp.motion_global_anchor_orientation_error_exp,
+        weight=0.1,
+        params={"command_name": "motion", "std": 0.4},
+    )
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
         weight=0.2,
@@ -403,7 +405,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
+    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.4})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
 
 
