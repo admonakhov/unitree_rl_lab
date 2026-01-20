@@ -130,9 +130,9 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.0),
-            "dynamic_friction_range": (0.3, 1.0),
-            "restitution_range": (0.0, 0.0),
+            "static_friction_range": (0.1, 1.0),
+            "dynamic_friction_range": (0.1, 1.0),
+            "restitution_range": (0.0, 0.1),
             "num_buckets": 64,
         },
     )
@@ -153,7 +153,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "com_range": {"x": (-0.025, 0.025), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
+            "com_range": {"x": (-0.075, 0.075), "y": (-0.1, 0.1), "z": (-0.1, 0.1)},
         },
     )
 
@@ -191,8 +191,8 @@ class CommandsCfg:
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-1, 2.5),
-            lin_vel_y=(-0.75, 0.75),
-            ang_vel_z=(-0.5, 0.5),
+            lin_vel_y=(-0.0, 0.0),
+            ang_vel_z=(-0.1, 0.1),
             heading=(-3.14, 3.14),
         ),
     )
@@ -358,7 +358,7 @@ class RewardsCfg:
     )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.2)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.78})
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.815})
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,
