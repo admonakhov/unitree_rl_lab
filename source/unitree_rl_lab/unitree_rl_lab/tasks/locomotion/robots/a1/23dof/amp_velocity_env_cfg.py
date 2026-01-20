@@ -25,8 +25,6 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 # робот и константы
 from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_CFG as ROBOT_CFG
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_ACTION_SCALE
-from unitree_rl_lab.assets.robots.arcus import LEG_JOINT_NAMES
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
 from unitree_rl_lab.tasks.mimic.mdp.commands import MotionCommandCfg
@@ -52,7 +50,6 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     },
 )
 
-
 VELOCITY_RANGE = {
     "x": (-0.5, 0.5),
     "y": (-0.5, 0.5),
@@ -61,7 +58,6 @@ VELOCITY_RANGE = {
     "pitch": (-0.52, 0.52),
     "yaw": (-0.78, 0.78),
 }
-
 
 # -----------------------
 # Scene
@@ -130,32 +126,31 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.1, 1.0),
-            "dynamic_friction_range": (0.1, 1.0),
-            "restitution_range": (0.0, 0.1),
+            "static_friction_range": (0.3, 1.0),
+            "dynamic_friction_range": (0.3, 1.0),
+            "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
     )
 
-    # add a bit of base mass variation (startup)
-    add_base_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "mass_distribution_params": (-1.0, 3.0),
-            "operation": "add",
-        },
-    )
+    # add_joint_default_pos = EventTerm(
+    #     func=mimic_mdp.randomize_joint_default_pos,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+    #         "pos_distribution_params": (-0.01, 0.01),
+    #         "operation": "add",
+    #     },
+    # )
 
-    base_com = EventTerm(
-        func=mimic_mdp.randomize_rigid_body_com,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "com_range": {"x": (-0.075, 0.075), "y": (-0.1, 0.1), "z": (-0.1, 0.1)},
-        },
-    )
+    # base_com = EventTerm(
+    #     func=mimic_mdp.randomize_rigid_body_com,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+    #         "com_range": {"x": (-0.025, 0.025), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
+    #     },
+    # )
 
     # interval
     push_robot = EventTerm(
@@ -203,18 +198,18 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file=["mocap/arcus/comp.npz"],
+        motion_file="mocap/arcus/comp.npz",
         anchor_body_name="torso_link",
         resampling_time_range=(10.0, 30.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
-        # Pose randomization ranges - increased yaw for different directions
+        
         pose_range={
             "x": (-0.03, 0.03),
             "y": (-0.03, 0.03),
-            "z": (-0.005, 0.005),
+            "z": (-0.000, 0.000),
             "roll": (-0.05, 0.05),
             "pitch": (-0.05, 0.05),
-            "yaw": (-0.5, 0.5),  # Increased from (-0.1, 0.1) for more directional variety
+            "yaw": (-0.0, 0.0),  # Increased from (-0.1, 0.1) for more directional variety
         },
         velocity_range={
             "x": (-0.3, 0.3),
@@ -227,6 +222,7 @@ class CommandsCfg:
         joint_position_range=(-0.02, 0.02),  # Further reduced for better arm tracking
         velocity_command_name="base_velocity",  # Link motion direction to velocity command for directional consistency
         set_velocity_command=True,  # Set the velocity command to match the current mocap velocity
+        zero_command_prob=0.0,  # Probability of setting velocity commands to zero (for balance training)
 
         # Bodies to track
         body_names=[
@@ -256,7 +252,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=ARCUS_A1_23DOF_MIMIC_ACTION_SCALE, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
     )
 
 
@@ -272,11 +268,11 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         # Velocity command observations
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.5, n_max=0.5))
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
         last_action = ObsTerm(func=mdp.last_action)
 
         # Note: motion_command and motion_anchor_ori_b are removed from policy observations
@@ -296,11 +292,11 @@ class ObservationsCfg:
         """Observations for critic group."""
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2)
         projected_gravity = ObsTerm(func=mdp.projected_gravity)
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel)
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
         last_action = ObsTerm(func=mdp.last_action)
 
         # Note: Motion observations removed from critic to avoid deploy issues.
@@ -345,7 +341,6 @@ class RewardsCfg:
         weight=-10.0,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*"])},
     )
-
     feet_clearance = RewTerm(
         func=mdp.foot_clearance_reward,
         weight=0.2,
@@ -358,36 +353,36 @@ class RewardsCfg:
     )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.2)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.815})
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.78})
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,
-        weight=0.1,
+        weight=0.5,
         params={"command_name": "motion", "std": 0.3},
     )
     motion_global_anchor_ori = RewTerm(
         func=mimic_mdp.motion_global_anchor_orientation_error_exp,
-        weight=0.1,
+        weight=0.5,
         params={"command_name": "motion", "std": 0.4},
     )
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
-        weight=0.2,
+        weight=1,
         params={"command_name": "motion", "std": 0.3},
     )
     motion_body_ori = RewTerm(
         func=mimic_mdp.motion_relative_body_orientation_error_exp,
-        weight=0.2,
+        weight=1,
         params={"command_name": "motion", "std": 0.4},
     )
     motion_body_lin_vel = RewTerm(
         func=mimic_mdp.motion_global_body_linear_velocity_error_exp,
-        weight=0.2,
+        weight=1,
         params={"command_name": "motion", "std": 1.0},
     )
     motion_body_ang_vel = RewTerm(
         func=mimic_mdp.motion_global_body_angular_velocity_error_exp,
-        weight=0.2,
+        weight=1,
         params={"command_name": "motion", "std": 3.14},
     )
 
@@ -414,7 +409,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.4})
+    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
 
 
@@ -491,4 +486,3 @@ class RobotPlayEnvCfg(RobotEnvCfg):
             lin_vel_x=(-3.6, 3.7), lin_vel_y=(-4.2, 3.9), ang_vel_z=(-9.0, 9.5), heading=(-3.14159, 3.14159),
         )
         self.commands.base_velocity.ranges = limit_ranges
-

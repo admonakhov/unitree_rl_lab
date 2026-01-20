@@ -61,7 +61,7 @@ ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
             effort_limit_sim=25,
             velocity_limit_sim=37,
             stiffness=40.0,
-            damping=1.0,
+            damping=10.0,
             armature=0.01,
         ),
         "N5020-16-parallel": ImplicitActuatorCfg(
@@ -304,17 +304,3 @@ ARCUS_A1_23DOF_MIMIC_CFG = UnitreeArticulationCfg(
         "right_wrist_roll_joint",
     ],
 )
-
-
-ARCUS_A1_23DOF_MIMIC_ACTION_SCALE = {}
-for a in ARCUS_A1_23DOF_MIMIC_CFG.actuators.values():
-    e = a.effort_limit_sim
-    s = a.stiffness
-    names = a.joint_names_expr
-    if not isinstance(e, dict):
-        e = {n: e for n in names}
-    if not isinstance(s, dict):
-        s = {n: s for n in names}
-    for n in names:
-        if n in e and n in s and s[n]:
-            ARCUS_A1_23DOF_MIMIC_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
