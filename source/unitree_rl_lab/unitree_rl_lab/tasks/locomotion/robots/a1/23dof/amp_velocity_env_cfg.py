@@ -284,10 +284,6 @@ class ObservationsCfg:
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.5, n_max=0.5))
         last_action = ObsTerm(func=mdp.last_action)
 
-        # Note: motion_command and motion_anchor_ori_b are removed from policy observations
-        # to avoid requiring motion data during deployment. They remain in critic observations
-        # for AMP discriminator training during learning.
-
         def __post_init__(self):
             self.history_length = 10
             self.enable_corruption = True
@@ -307,11 +303,6 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel)
         last_action = ObsTerm(func=mdp.last_action)
-
-        # Note: Motion observations removed from critic to avoid deploy issues.
-        # Motion command is still used in rewards for AMP training, but not needed
-        # in observations during deployment. AMP discriminator training uses motion
-        # data directly from the motion command, not through observations.
 
         def __post_init__(self):
             self.history_length = 10
@@ -405,30 +396,6 @@ class RewardsCfg:
                 ],
             ),
             "threshold": 1.0,
-        },
-    )
-
-    gait = RewTerm(
-        func=mdp.feet_gait,
-        weight=1,
-        params={
-            "period": 1.,
-            "offset": [0.0, 0.5],
-            "threshold": 0.5,
-            "command_name": "base_velocity",
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
-        },
-    )
-
-
-    feet_clearance = RewTerm(
-        func=mdp.foot_clearance_reward,
-        weight=1.0,
-        params={
-            "std": 0.05,
-            "tanh_mult": 2.0,
-            "target_height": 0.1,
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
         },
     )
 
