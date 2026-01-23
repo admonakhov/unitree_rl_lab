@@ -126,31 +126,31 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.0),
-            "dynamic_friction_range": (0.3, 1.0),
-            "restitution_range": (0.0, 0.0),
+            "static_friction_range": (0.1, 1.6),
+            "dynamic_friction_range": (0.1, 1.2),
+            "restitution_range": (0.0, 0.5),
             "num_buckets": 64,
         },
     )
 
-    # add_joint_default_pos = EventTerm(
-    #     func=mimic_mdp.randomize_joint_default_pos,
-    #     mode="startup",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-    #         "pos_distribution_params": (-0.01, 0.01),
-    #         "operation": "add",
-    #     },
-    # )
+    add_joint_default_pos = EventTerm(
+        func=mimic_mdp.randomize_joint_default_pos,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+            "pos_distribution_params": (-0.01, 0.01),
+            "operation": "add",
+        },
+    )
 
-    # base_com = EventTerm(
-    #     func=mimic_mdp.randomize_rigid_body_com,
-    #     mode="startup",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-    #         "com_range": {"x": (-0.025, 0.025), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
-    #     },
-    # )
+    base_com = EventTerm(
+        func=mimic_mdp.randomize_rigid_body_com,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+            "com_range": {"x": (-0.05, 0.05), "y": (-0.1, 0.1), "z": (-0.075, 0.075)},
+        },
+    )
 
     # interval
     push_robot = EventTerm(
@@ -160,6 +160,16 @@ class EventCfg:
         params={"velocity_range": VELOCITY_RANGE},
     )
 
+
+    add_base_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+            "mass_distribution_params": (-1.0, 3.0),
+            "operation": "add",
+        },
+    )
 
 # -----------------------
 # Commands
@@ -222,7 +232,6 @@ class CommandsCfg:
         joint_position_range=(-0.02, 0.02),  # Further reduced for better arm tracking
         velocity_command_name="base_velocity",  # Link motion direction to velocity command for directional consistency
         set_velocity_command=True,  # Set the velocity command to match the current mocap velocity
-        zero_command_prob=0.0,  # Probability of setting velocity commands to zero (for balance training)
 
         # Bodies to track
         body_names=[
@@ -268,11 +277,11 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         # Velocity command observations
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.5, n_max=0.5))
         last_action = ObsTerm(func=mdp.last_action)
 
         # Note: motion_command and motion_anchor_ori_b are removed from policy observations
@@ -296,7 +305,7 @@ class ObservationsCfg:
         projected_gravity = ObsTerm(func=mdp.projected_gravity)
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel)
         last_action = ObsTerm(func=mdp.last_action)
 
         # Note: Motion observations removed from critic to avoid deploy issues.
@@ -332,7 +341,6 @@ class RewardsCfg:
     )
 
     # -- base
-    # joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-1e-1)
@@ -353,7 +361,7 @@ class RewardsCfg:
     )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.2)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.78})
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.815})
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,
@@ -400,6 +408,30 @@ class RewardsCfg:
         },
     )
 
+    gait = RewTerm(
+        func=mdp.feet_gait,
+        weight=1,
+        params={
+            "period": 1.,
+            "offset": [0.0, 0.5],
+            "threshold": 0.5,
+            "command_name": "base_velocity",
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        },
+    )
+
+
+    feet_clearance = RewTerm(
+        func=mdp.foot_clearance_reward,
+        weight=1.0,
+        params={
+            "std": 0.05,
+            "tanh_mult": 2.0,
+            "target_height": 0.1,
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+        },
+    )
+
 
 # -----------------------
 # Terminations
@@ -409,9 +441,8 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.2})
+    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.4})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
-
 
 # -----------------------
 # Curriculum

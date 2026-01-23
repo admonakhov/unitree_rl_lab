@@ -13,7 +13,7 @@ ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
     #     usd_path=f"{UNITREE_MODEL_DIR}/a1_23dof/a1_23dof.usd",
     # ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.82),
+        pos=(0.0, 0.0, 0.81),
         joint_pos={
             ".*_hip_pitch_joint": -0.1,
             ".*_knee_joint": 0.3,
