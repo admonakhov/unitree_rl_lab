@@ -7,7 +7,7 @@ from unitree_rl_lab.assets.robots.unitree import UnitreeUsdFileCfg, UnitreeUrdfF
 
 ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path="robots/a1/arcus_1.5_5.urdf",
+        asset_path="robots/a1/arcus_1.5_6.urdf",
     ),
     # spawn=UnitreeUsdFileCfg(
     #     usd_path=f"{UNITREE_MODEL_DIR}/a1_23dof/a1_23dof.usd",
@@ -61,7 +61,7 @@ ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
             effort_limit_sim=25,
             velocity_limit_sim=37,
             stiffness=40.0,
-            damping=10.0,
+            damping=1.0,
             armature=0.01,
         ),
         "N5020-16-parallel": ImplicitActuatorCfg(
