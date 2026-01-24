@@ -24,7 +24,8 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 # робот и константы
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_ACTION_SCALE as ACTION_SCALE
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_CFG as ROBOT_CFG
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
 from unitree_rl_lab.tasks.mimic.mdp.commands import MotionCommandCfg
@@ -263,7 +264,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=ACTION_SCALE, use_default_offset=True
     )
 
 
