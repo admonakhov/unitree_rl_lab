@@ -11,9 +11,9 @@ FSM:
     Mimic_Dance_102: # uncomment to enable
       id: 101
       type: Mimic
-    Mimic_Gangnam_Style:
-      id: 102
-      type: Mimic
+    # Mimic_Gangnam_Style:
+    #   id: 102
+    #   type: Mimic
 
   Passive:
     transitions: 
@@ -66,16 +66,16 @@ FSM:
       Mimic_Dance_102: LT(2s) + down.on_pressed
       Mimic_Gangnam_Style: LT(2s) + left.on_pressed
 
-    policy_dir: config/policy/velocity
-    # policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_velocity
+    # policy_dir: config/policy/velocity
+    policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_v0_amp_velocity
   Mimic_Dance_102:
     transitions: 
       Passive: LT + B.on_pressed
       Velocity: RB + X.on_pressed
-    fps: 60
-    motion_file: /home/ant/UniTree/gym/unitree_rl_lab/source/unitree_rl_lab/unitree_rl_lab/tasks/mimic/robots/g1_29dof/dance_102/G1_Take_102.bvh_60hz.csv
-    policy_dir: /home/ant/UniTree/gym/unitree_rl_lab/logs/rsl_rl/unitree_g1_29dof_mimic_dance_102
-    time_start: 2.8
+    fps: 50
+    motion_file: ../../../mocap/g1/comp.csv
+    policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_mimic_dance_102
+    time_start: 0
     time_end: 24.0
   Mimic_Gangnam_Style:
     transitions: 

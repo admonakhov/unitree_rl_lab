@@ -7,13 +7,13 @@ from unitree_rl_lab.assets.robots.unitree import UnitreeUsdFileCfg, UnitreeUrdfF
 
 ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path="robots/a1/arcus_1.5_4.urdf",
+        asset_path="robots/a1/arcus_1.5_6.urdf",
     ),
     # spawn=UnitreeUsdFileCfg(
     #     usd_path=f"{UNITREE_MODEL_DIR}/a1_23dof/a1_23dof.usd",
     # ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.82),
+        pos=(0.0, 0.0, 0.81),
         joint_pos={
             ".*_hip_pitch_joint": -0.1,
             ".*_knee_joint": 0.3,
@@ -140,7 +140,7 @@ DAMPING_4010 = 2.0 * DAMPING_RATIO * ARMATURE_4010 * NATURAL_FREQ  # 1.068141502
 
 ARCUS_A1_23DOF_MIMIC_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path="robots/a1/arcus_1.5_4.urdf",
+        asset_path="robots/a1/arcus_1.5_6.urdf",
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(
@@ -292,15 +292,34 @@ ARCUS_A1_23DOF_MIMIC_CFG = UnitreeArticulationCfg(
         "right_ankle_pitch_joint",
         "right_ankle_roll_joint",
         "waist_yaw_joint",
+        "",
+        "",
         "left_shoulder_pitch_joint",
         "left_shoulder_roll_joint",
         "left_shoulder_yaw_joint",
         "left_elbow_joint",
         "left_wrist_roll_joint",
+        "",
+        "",
         "right_shoulder_pitch_joint",
         "right_shoulder_roll_joint",
         "right_shoulder_yaw_joint",
         "right_elbow_joint",
         "right_wrist_roll_joint",
+
     ],
 )
+
+
+ARCUS_A1_23DOF_MIMIC_ACTION_SCALE = {}
+for a in ARCUS_A1_23DOF_MIMIC_CFG.actuators.values():
+    e = a.effort_limit_sim
+    s = a.stiffness
+    names = a.joint_names_expr
+    if not isinstance(e, dict):
+        e = {n: e for n in names}
+    if not isinstance(s, dict):
+        s = {n: s for n in names}
+    for n in names:
+        if n in e and n in s and s[n]:
+            ARCUS_A1_23DOF_MIMIC_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
