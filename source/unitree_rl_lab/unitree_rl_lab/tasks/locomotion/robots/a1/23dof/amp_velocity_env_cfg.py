@@ -264,7 +264,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=ACTION_SCALE, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.1, use_default_offset=True
     )
 
 
@@ -288,7 +288,7 @@ class ObservationsCfg:
         last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.history_length = 10
+            self.history_length = 5
             self.enable_corruption = True
             self.concatenate_terms = True
 
@@ -308,7 +308,7 @@ class ObservationsCfg:
         last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.history_length = 10
+            self.history_length = 5
 
     # privileged observations
     critic: CriticCfg = CriticCfg()
