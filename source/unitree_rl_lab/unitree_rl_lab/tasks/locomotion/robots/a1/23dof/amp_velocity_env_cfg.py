@@ -127,8 +127,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.0),
-            "dynamic_friction_range": (0.3, 1.0),
+            "static_friction_range": (0.2, 1.0),
+            "dynamic_friction_range": (0.2, 1.0),
             "restitution_range": (0.0, 0.0), # Упругость столкновений
             "num_buckets": 64,
         },
@@ -140,7 +140,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "mass_distribution_params": (-1.0, 3.0),
+            "mass_distribution_params": (-3.0, 3.0),
             "operation": "add",
         },
     )
@@ -198,9 +198,9 @@ class CommandsCfg:
             heading=(-0, 0),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1, 2.5),
+            lin_vel_x=(-1, 1.5),
             lin_vel_y=(-0.0, 0.0),
-            ang_vel_z=(-0.1, 0.1),
+            ang_vel_z=(-1.1, 1.1),
             heading=(-3.14, 3.14),
         ),
     )
@@ -211,7 +211,18 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file="mocap/arcus/comp.npz",
+        motion_file=["mocap/arcus/comp.npz",
+                     "mocap/arcus/monakhov/moving forward slow.npz",
+                     "mocap/arcus/monakhov/rot1.npz", "mocap/arcus/monakhov/rot2.npz",
+                    #  "mocap/arcus/monakhov/left.npz", "mocap/arcus/monakhov/right.npz",
+                    #  "mocap/arcus/monakhov/clockwise.npz", "mocap/arcus/monakhov/unclockwise.npz",
+                    #  "mocap/arcus/monakhov/going back fast.npz",
+                     "mocap/arcus/monakhov/going back.npz",
+                    #  "mocap/arcus/monakhov/going sideway.npz",
+                    #  "mocap/arcus/monakhov/rotation.npz",
+                     "mocap/arcus/monakhov/stand.npz",
+                     ],
+
         anchor_body_name="torso_link",
         resampling_time_range=(10.0, 30.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
@@ -264,7 +275,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=ACTION_SCALE, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.15, use_default_offset=True
     )
 
 
@@ -288,7 +299,7 @@ class ObservationsCfg:
         last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.history_length = 10
+            self.history_length = 5
             self.enable_corruption = True
             self.concatenate_terms = True
 
@@ -308,7 +319,7 @@ class ObservationsCfg:
         last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.history_length = 10
+            self.history_length = 5
 
     # privileged observations
     critic: CriticCfg = CriticCfg()
@@ -337,32 +348,50 @@ class RewardsCfg:
     # -- base
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
+    # joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
     joint_limit = RewTerm(
         func=mdp.joint_pos_limits,
         weight=-10.0,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*"])},
+        params={"asset_cfg":
+                SceneEntityCfg("robot", joint_names=[r"^(?!left_knee_joint$)(?!right_knee_joint$).+$"])},
     )
 
-    action_l2 = RewTerm(
-        func=mdp.action_l2,
-        weight=-1e-4
+    knee_limit = RewTerm(
+        func=mdp.joint_pos_limits,
+        weight=-1.0,
+        params={"asset_cfg":
+                SceneEntityCfg("robot", joint_names=["left_knee_joint", "right_knee_joint"])},
     )
 
-    # feet_clearance = RewTerm(
-    #     func=mdp.foot_clearance_reward,
-    #     weight=0.2,
-    #     params={
-    #         "std": 0.05,
-    #         "tanh_mult": 2.0,
-    #         "target_height": 0.1,
-    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-    #     },
+    # action_l2 = RewTerm(
+    #     func=mdp.action_l2,
+    #     weight=-1e-4
     # )
 
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.2)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.815})
+    feet_clearance = RewTerm(
+        func=mdp.foot_clearance_reward,
+        weight=0.2,
+        params={
+            "std": 0.05,
+            "tanh_mult": 2.0,
+            "target_height": 0.1,
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+        },
+    )
+
+
+    feet_slide = RewTerm(
+        func=mdp.feet_slide,
+        weight=-0.05,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        },
+    )
+
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1)
+    # base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.815})
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,

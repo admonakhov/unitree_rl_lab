@@ -58,6 +58,9 @@ class ReplayMotionsSceneCfg(InteractiveSceneCfg):
             intensity=750.0,
             texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
         ),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            rot=(0.0, 0.0, 0.7071, 0.7071),  # поворот вокруг Z на 90°
+        ),
     )
 
     # articulation
@@ -96,7 +99,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         scene.update(sim_dt)
 
         pos_lookat = root_states[0, :3].cpu().numpy()
-        sim.set_camera_view(pos_lookat + np.array([2.5, 0.0, 0.5]), pos_lookat)
+        sim.set_camera_view(pos_lookat + np.array([3, -0.0, 0.5]), pos_lookat)
 
 
 def main():

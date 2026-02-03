@@ -60,7 +60,7 @@ from isaaclab.utils.math import axis_angle_from_quat, quat_conjugate, quat_mul, 
 ##
 # Pre-defined configs
 ##
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_CFG as ROBOT_CFG  # Currently only support G1-29dof
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_RETARGETING_CFG as ROBOT_CFG  # Currently only support G1-29dof
 
 
 @configclass
@@ -274,8 +274,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # set joint state
         joint_pos = robot.data.default_joint_pos.clone()
         joint_vel = robot.data.default_joint_vel.clone()
-        joint_pos[:, robot_joint_indexes] = motion_dof_pos
-        joint_vel[:, robot_joint_indexes] = motion_dof_vel
+        joint_pos[:, robot_joint_indexes] = motion_dof_pos[:,:23]
+        joint_vel[:, robot_joint_indexes] = motion_dof_vel[:,:23]
         robot.write_joint_state_to_sim(joint_pos, joint_vel)
         sim.render()  # We don't want physic (sim.step())
         scene.update(sim.get_physics_dt())
