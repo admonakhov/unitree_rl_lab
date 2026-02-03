@@ -275,7 +275,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=ACTION_SCALE, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.15, use_default_offset=True
     )
 
 
