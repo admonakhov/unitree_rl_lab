@@ -23,8 +23,6 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-# робот и константы
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_ACTION_SCALE as ACTION_SCALE
 from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_CFG as ROBOT_CFG
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
@@ -129,7 +127,7 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
             "static_friction_range": (0.2, 1.0),
             "dynamic_friction_range": (0.2, 1.0),
-            "restitution_range": (0.0, 0.0), # Упругость столкновений
+            "restitution_range": (0.0, 0.1), # Упругость столкновений
             "num_buckets": 64,
         },
     )
@@ -160,7 +158,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "com_range": {"x": (-0.05, 0.05), "y": (-0.1, 0.1), "z": (-0.075, 0.075)},
+            "com_range": {"x": (-0.075, 0.075), "y": (-0.1, 0.1), "z": (-0.1, 0.05)},
         },
     )
 
@@ -275,7 +273,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.15, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
     )
 
 

@@ -140,7 +140,7 @@ DAMPING_4010 = 2.0 * DAMPING_RATIO * ARMATURE_4010 * NATURAL_FREQ  # 1.068141502
 
 ARCUS_A1_23DOF_MIMIC_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path="robots/a1/arcus_1.5_6.urdf",
+        asset_path="robots/arcus/a1_2/Arcus_2_custom_arms.urdf",
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(
