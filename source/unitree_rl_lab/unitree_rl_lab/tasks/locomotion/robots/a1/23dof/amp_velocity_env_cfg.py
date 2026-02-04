@@ -228,7 +228,7 @@ class CommandsCfg:
         pose_range={
             "x": (-0.03, 0.03),
             "y": (-0.03, 0.03),
-            "z": (-0.000, 0.000),
+            "z": (0.110, 0.110),
             "roll": (-0.05, 0.05),
             "pitch": (-0.05, 0.05),
             "yaw": (-0.0, 0.0),  # Increased from (-0.1, 0.1) for more directional variety
