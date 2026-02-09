@@ -500,7 +500,7 @@ class MotionCommandCfg(CommandTermCfg):
     velocity_command_name: str | None = None  # Name of velocity command to align motion direction with
     set_velocity_command: bool = False  # If True, set the velocity command to match the current mocap velocity
     zero_command_prob: float = 0.0  # Probability of setting velocity commands to zero (for balance training)
-    velocity_smoothing_alpha: float = 0.75  # EMA alpha for smoothing velocity commands (0..1)
+    velocity_smoothing_alpha: float = 0.99  # EMA alpha for smoothing velocity commands (0..1)
     motion_assignment: str = "round_robin"  # 'round_robin' or 'random' per-env motion file assignment
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")

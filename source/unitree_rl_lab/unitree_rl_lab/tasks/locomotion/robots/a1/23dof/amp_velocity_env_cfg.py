@@ -209,26 +209,20 @@ class CommandsCfg:
         # Path to motion file (convert CSV to NPZ before training)
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
-        motion_file=["mocap/arcus/comp.npz",
-                     "mocap/arcus/monakhov/moving forward slow.npz",
-                     "mocap/arcus/monakhov/rot1.npz", "mocap/arcus/monakhov/rot2.npz",
-                    #  "mocap/arcus/monakhov/left.npz", "mocap/arcus/monakhov/right.npz",
-                    #  "mocap/arcus/monakhov/clockwise.npz", "mocap/arcus/monakhov/unclockwise.npz",
-                    #  "mocap/arcus/monakhov/going back fast.npz",
-                     "mocap/arcus/monakhov/going back.npz",
-                    #  "mocap/arcus/monakhov/going sideway.npz",
-                    #  "mocap/arcus/monakhov/rotation.npz",
-                     "mocap/arcus/monakhov/stand.npz",
+        motion_file=[
+                    #  "mocap/arcus/monakhov/moving forward slow.npz",
+                     "mocap/arcus/irina/start_n_stop.npz", "mocap/arcus/irina/back.npz", 
+                    #  "mocap/arcus/irina/left_rot.npz", "mocap/arcus/irina/right_rot.npz", 
                      ],
 
         anchor_body_name="torso_link",
-        resampling_time_range=(10.0, 30.0),  # Enable resampling to allow motion changes with velocity commands
+        resampling_time_range=(50.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
         
         pose_range={
             "x": (-0.03, 0.03),
             "y": (-0.03, 0.03),
-            "z": (0.110, 0.110),
+            "z": (0.0, 0.0),
             "roll": (-0.05, 0.05),
             "pitch": (-0.05, 0.05),
             "yaw": (-0.0, 0.0),  # Increased from (-0.1, 0.1) for more directional variety
@@ -355,12 +349,12 @@ class RewardsCfg:
                 SceneEntityCfg("robot", joint_names=[r"^(?!left_knee_joint$)(?!right_knee_joint$).+$"])},
     )
 
-    knee_limit = RewTerm(
-        func=mdp.joint_pos_limits,
-        weight=-1.0,
-        params={"asset_cfg":
-                SceneEntityCfg("robot", joint_names=["left_knee_joint", "right_knee_joint"])},
-    )
+    # knee_limit = RewTerm(
+    #     func=mdp.joint_pos_limits,
+    #     weight=-1.0,
+    #     params={"asset_cfg":
+    #             SceneEntityCfg("robot", joint_names=["left_knee_joint", "right_knee_joint"])},
+    # )
 
     # action_l2 = RewTerm(
     #     func=mdp.action_l2,
