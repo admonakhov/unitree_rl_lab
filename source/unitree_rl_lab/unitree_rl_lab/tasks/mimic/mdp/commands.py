@@ -351,14 +351,15 @@ class MotionCommand(CommandTerm):
         lengths_per_env = self.motion_lengths[self.motion_ids]
         env_ids = torch.where(self.time_steps >= lengths_per_env)[0]
         self._resample_command(env_ids)
+        # if len(env_ids) > 0:
+        #     # reset time to start of the same motion (disable resampling/mixing)
+        #     self.time_steps[env_ids] = 0
 
         # Get current mocap data (assembled per-env across motions)
         body_pos_w = self.body_pos_w
         body_quat_w = self.body_quat_w
         body_lin_vel_w = self.body_lin_vel_w
         body_ang_vel_w = self.body_ang_vel_w
-        joint_pos = self.joint_pos
-        joint_vel = self.joint_vel
 
         anchor_pos_w_repeat = self.anchor_pos_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
         anchor_quat_w_repeat = self.anchor_quat_w[:, None, :].repeat(1, len(self.cfg.body_names), 1)
@@ -378,18 +379,27 @@ class MotionCommand(CommandTerm):
                 # reset smoothed velocity when forcing zero commands
                 self.velocity_command_smoothed.zero_()
             elif self.cfg.set_velocity_command:
-                # Transform mocap velocity to mocap anchor's local frame
                 local_lin_vel = quat_apply(quat_inv(self.anchor_quat_w), self.anchor_lin_vel_w)
-                # target velocity from mocap (local frame): [lin_x, lin_y, ang_z]
                 target_vel = torch.stack(
                     (local_lin_vel[:, 0], local_lin_vel[:, 1], self.anchor_ang_vel_w[:, 2]), dim=1
                 )
-                # Exponential moving average smoothing: new = alpha * prev + (1-alpha) * target
+
+                # root_lin_vel = body_lin_vel_w[:, 0]
+                # root_ang_vel = body_ang_vel_w[:, 0]
+                # local_lin_vel = quat_apply(quat_inv(self.anchor_quat_w), root_lin_vel)
+                # local_ang_vel = quat_apply(quat_inv(self.anchor_quat_w), root_ang_vel)
+                # target_vel = torch.stack((local_lin_vel[:, 0], local_lin_vel[:, 1], local_ang_vel[:, 2]), dim=1)
+
+
                 self.velocity_command_smoothed = (
                     self.cfg.velocity_smoothing_alpha * self.velocity_command_smoothed
                     + (1.0 - self.cfg.velocity_smoothing_alpha) * target_vel
                 )
-                velocity_commands[:, :3] = self.velocity_command_smoothed
+
+                velocity_commands[:, 0] = torch.trunc(self.velocity_command_smoothed[:, 0] * 25) / 25
+                velocity_commands[:, 1] = torch.trunc(self.velocity_command_smoothed[:, 1] * 10) / 10
+                velocity_commands[:, 2] = torch.trunc(self.velocity_command_smoothed[:, 2] * 5) / 5
+                
             # Use original delta orientation (frames oriented relative to robot's current pose)
             delta_ori_w = original_delta_ori_w
         else:
@@ -500,7 +510,7 @@ class MotionCommandCfg(CommandTermCfg):
     velocity_command_name: str | None = None  # Name of velocity command to align motion direction with
     set_velocity_command: bool = False  # If True, set the velocity command to match the current mocap velocity
     zero_command_prob: float = 0.0  # Probability of setting velocity commands to zero (for balance training)
-    velocity_smoothing_alpha: float = 0.99  # EMA alpha for smoothing velocity commands (0..1)
+    velocity_smoothing_alpha: float = 0.975  # EMA alpha for smoothing velocity commands (0..1)
     motion_assignment: str = "round_robin"  # 'round_robin' or 'random' per-env motion file assignment
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")

@@ -210,9 +210,17 @@ class CommandsCfg:
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
         motion_file=[
-                    #  "mocap/arcus/monakhov/moving forward slow.npz",
-                     "mocap/arcus/irina/start_n_stop.npz", "mocap/arcus/irina/back.npz", 
-                    #  "mocap/arcus/irina/left_rot.npz", "mocap/arcus/irina/right_rot.npz", 
+                    # "mocap/arcus/irina/start_n_stop.npz", 
+                    # "mocap/arcus/irina/forward.npz", 
+                    # "mocap/arcus/irina/back.npz", 
+                    # "mocap/arcus/irina/left_rot.npz",
+                    # "mocap/arcus/irina/right_rot.npz", 
+                    "mocap/arcus/andrey/forward_1.npz",
+                    # "mocap/arcus/andrey/forward_2.npz",  
+                    "mocap/arcus/andrey/back.npz", 
+                    "mocap/arcus/monakhov/stand.npz", 
+                    # "mocap/arcus/monakhov/rot1.npz", 
+                    # "mocap/arcus/monakhov/rot2.npz", 
                      ],
 
         anchor_body_name="torso_link",
@@ -301,7 +309,9 @@ class ObservationsCfg:
     @configclass
     class CriticCfg(ObsGroup):
         """Observations for critic group."""
-
+        command = ObsTerm(func=mimic_mdp.generated_commands, params={"command_name": "motion"})
+        motion_anchor_pos_b = ObsTerm(func=mimic_mdp.motion_anchor_pos_b, params={"command_name": "motion"})
+        motion_anchor_ori_b = ObsTerm(func=mimic_mdp.motion_anchor_ori_b, params={"command_name": "motion"})
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2)
         projected_gravity = ObsTerm(func=mdp.projected_gravity)
@@ -327,13 +337,13 @@ class RewardsCfg:
     # -- Velocity tracking task rewards (adjusted since motion tracking is now stronger)
     track_lin_vel_xy = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_exp,
-        weight=3.0,  # Slightly reduced to balance with stronger motion tracking
+        weight=1,
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
     # stronger angular velocity tracking to improve turning behavior
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp,
-        weight=1.5, 
+        weight=1, 
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
@@ -341,7 +351,7 @@ class RewardsCfg:
     joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     # joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.025)
     joint_limit = RewTerm(
         func=mdp.joint_pos_limits,
         weight=-10.0,
@@ -387,12 +397,12 @@ class RewardsCfg:
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,
-        weight=0.5,
+        weight=0.25,
         params={"command_name": "motion", "std": 0.3},
     )
     motion_global_anchor_ori = RewTerm(
         func=mimic_mdp.motion_global_anchor_orientation_error_exp,
-        weight=0.5,
+        weight=0.25,
         params={"command_name": "motion", "std": 0.4},
     )
     motion_body_pos = RewTerm(
