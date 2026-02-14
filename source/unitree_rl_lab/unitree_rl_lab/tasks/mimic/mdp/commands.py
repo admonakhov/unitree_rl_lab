@@ -396,7 +396,7 @@ class MotionCommand(CommandTerm):
                     + (1.0 - self.cfg.velocity_smoothing_alpha) * target_vel
                 )
 
-                velocity_commands[:, 0] = torch.trunc(self.velocity_command_smoothed[:, 0] * 25) / 25
+                velocity_commands[:, 0] = torch.trunc(self.velocity_command_smoothed[:, 0] * 25 / 1.5) / 25
                 velocity_commands[:, 1] = torch.trunc(self.velocity_command_smoothed[:, 1] * 10) / 10
                 velocity_commands[:, 2] = torch.trunc(self.velocity_command_smoothed[:, 2] * 5) / 5
                 

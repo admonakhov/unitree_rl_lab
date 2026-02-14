@@ -148,7 +148,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-            "pos_distribution_params": (-0.01, 0.01),
+            "pos_distribution_params": (-0.1, 0.1),
             "operation": "add",
         },
     )
@@ -213,15 +213,19 @@ class CommandsCfg:
                     # "mocap/arcus/irina/start_n_stop.npz", 
                     # "mocap/arcus/irina/forward.npz", 
                     # "mocap/arcus/irina/back.npz", 
-                    # "mocap/arcus/irina/left_rot.npz",
-                    # "mocap/arcus/irina/right_rot.npz", 
-                    "mocap/arcus/andrey/forward_1.npz",
+                    "mocap/arcus/irina/left_rot.npz",
+                    "mocap/arcus/irina/right_rot.npz", 
+                    # "mocap/arcus/andrey/slow_forward.npz",
+                    "mocap/arcus/andrey/medium_forward.npz",
+                    # "mocap/arcus/andrey/fast_forward.npz",
                     # "mocap/arcus/andrey/forward_2.npz",  
-                    "mocap/arcus/andrey/back.npz", 
+                    "mocap/arcus/andrey/back.npz",
+                    "mocap/arcus/andrey/arc1.npz",
+                    "mocap/arcus/andrey/arc2.npz",    
                     "mocap/arcus/monakhov/stand.npz", 
                     # "mocap/arcus/monakhov/rot1.npz", 
                     # "mocap/arcus/monakhov/rot2.npz", 
-                     ],
+                    ],
 
         anchor_body_name="torso_link",
         resampling_time_range=(50.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
@@ -275,7 +279,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.15, use_default_offset=True
     )
 
 
@@ -343,15 +347,15 @@ class RewardsCfg:
     # stronger angular velocity tracking to improve turning behavior
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp,
-        weight=1, 
+        weight=0.5, 
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
     # -- base
-    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
+    # joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    # joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.025)
+    joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.015)
     joint_limit = RewTerm(
         func=mdp.joint_pos_limits,
         weight=-10.0,
@@ -371,16 +375,16 @@ class RewardsCfg:
     #     weight=-1e-4
     # )
 
-    feet_clearance = RewTerm(
-        func=mdp.foot_clearance_reward,
-        weight=0.2,
-        params={
-            "std": 0.05,
-            "tanh_mult": 2.0,
-            "target_height": 0.1,
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-        },
-    )
+    # feet_clearance = RewTerm(
+    #     func=mdp.foot_clearance_reward,
+    #     weight=0.2,
+    #     params={
+    #         "std": 0.05,
+    #         "tanh_mult": 2.0,
+    #         "target_height": 0.1,
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
+    #     },
+    # )
 
 
     feet_slide = RewTerm(
@@ -407,7 +411,7 @@ class RewardsCfg:
     )
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
-        weight=1,
+        weight=1.5,
         params={"command_name": "motion", "std": 0.3},
     )
     motion_body_ori = RewTerm(
@@ -450,18 +454,19 @@ class TerminationsCfg:
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.4})
-    bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
+    bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.4})
 
 # -----------------------
 # Curriculum
 # -----------------------
-@configclass
-class CurriculumCfg:
-    """Curriculum terms for the MDP."""
+# @configclass
+# class CurriculumCfg:
+#     """Curriculum terms for the MDP."""
 
-    # Disabled terrain curriculum since using only flat terrain
-    # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
-    lin_vel_cmd_levels = CurrTerm(func=mdp.lin_vel_cmd_levels)
+#     # Disabled terrain curriculum since using only flat terrain
+#     # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+#     # lin_vel_cmd_levels = CurrTerm(func=mdp.lin_vel_cmd_levels)
+#     pass
 
 
 # -----------------------
@@ -483,7 +488,8 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     events: EventCfg = EventCfg()
-    curriculum: CurriculumCfg = CurriculumCfg()
+    curriculum = None
+    # curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         """Post initialization."""
