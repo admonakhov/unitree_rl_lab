@@ -91,7 +91,9 @@ class MotionLoader:
         output_fps: int,
         device: torch.device,
         frame_range: tuple[int, int] | None,
+        rot_smoothing_alpha: float = 0.2,
     ):
+        self.rot_smoothing_alpha = rot_smoothing_alpha
         self.motion_file = motion_file
         self.input_fps = input_fps
         self.output_fps = output_fps
@@ -101,8 +103,137 @@ class MotionLoader:
         self.device = device
         self.frame_range = frame_range
         self._load_motion()
+        self._remove_lateral_motion()
+        self._align_motion_to_x_axis()
+        self._straighten_motion()   
         self._interpolate_motion()
+        # self._smooth_rotations()
         self._compute_velocities()
+
+    def _remove_lateral_motion(self):
+        """Project motion onto average forward direction and remove lateral drift."""
+
+        pos = self.motion_base_poss_input
+
+        # --- 1. compute average forward direction ---
+        vel = torch.gradient(pos, spacing=self.input_dt, dim=0)[0]
+        vel_xy = vel[:, :2]
+
+        forward = vel_xy.mean(dim=0)
+        forward = forward / torch.norm(forward)
+
+        # orthogonal (lateral) direction
+        lateral = torch.tensor(
+            [-forward[1], forward[0]],
+            device=self.device,
+            dtype=torch.float32,
+        )
+
+        # --- 2. project positions ---
+        origin = pos[0, :2].clone()
+        rel = pos[:, :2] - origin
+
+        forward_comp = (rel @ forward)[:, None] * forward
+        # полностью убираем боковую компоненту
+        new_xy = origin + forward_comp
+
+        pos[:, :2] = new_xy
+        self.motion_base_poss_input = pos
+
+    def _straighten_motion(self):
+        """Align motion to average horizontal velocity direction and remove lateral drift."""
+
+        # --- 1. compute average horizontal velocity ---
+        vel = torch.gradient(self.motion_base_poss_input, spacing=self.input_dt, dim=0)[0]
+        vel_xy = vel[:, :2]
+
+        mean_dir = vel_xy.mean(dim=0)
+        mean_dir = mean_dir / torch.norm(mean_dir)
+
+        # yaw angle of mean direction
+        yaw = torch.atan2(mean_dir[1], mean_dir[0])
+
+        # --- 2. build correction rotation (negative yaw) ---
+        half_yaw = -yaw * 0.5
+        q_correction = torch.tensor(
+            [torch.cos(half_yaw), 0.0, 0.0, torch.sin(half_yaw)],
+            device=self.device,
+            dtype=torch.float32,
+        )
+
+        # --- 3. rotate orientations ---
+        self.motion_base_rots_input = quat_mul(
+            q_correction.unsqueeze(0).repeat(self.motion_base_rots_input.shape[0], 1),
+            self.motion_base_rots_input,
+        )
+
+        # --- 4. rotate positions ---
+        c = torch.cos(-yaw)
+        s = torch.sin(-yaw)
+        R = torch.tensor([[c, -s], [s, c]], device=self.device)
+
+        pos = self.motion_base_poss_input
+        pos[:, :2] = (R @ pos[:, :2].T).T
+
+        # --- 5. remove lateral drift (optional but recommended) ---
+        # subtract mean Y over time
+        pos[:, 1] -= pos[:, 1].mean()
+
+        self.motion_base_poss_input = pos
+
+    def _smooth_rotations(self):
+        """Smooth quaternion sequence using exponential slerp filter."""
+        if self.rot_smoothing_alpha >= 1.0:
+            return  # no smoothing
+
+        smoothed = torch.zeros_like(self.motion_base_rots)
+        smoothed[0] = self.motion_base_rots[0]
+
+        for i in range(1, self.motion_base_rots.shape[0]):
+            smoothed[i] = quat_slerp(
+                smoothed[i - 1],
+                self.motion_base_rots[i],
+                self.rot_smoothing_alpha,
+            )
+
+        self.motion_base_rots = smoothed
+
+    def _align_motion_to_x_axis(self):
+        """Rotate the entire motion so that the initial base heading is aligned with +X axis."""
+
+        # initial rotation
+        q0 = self.motion_base_rots_input[0]  # (4,) wxyz
+
+        # extract yaw from quaternion
+        # yaw = atan2(2(wz + xy), 1 - 2(y² + z²))
+        w, x, y, z = q0
+        yaw = torch.atan2(
+            2.0 * (w * z + x * y),
+            1.0 - 2.0 * (y * y + z * z),
+        )
+
+        # build correction quaternion (negative yaw)
+        half_yaw = -yaw * 0.5
+        q_correction = torch.tensor(
+            [torch.cos(half_yaw), 0.0, 0.0, torch.sin(half_yaw)],
+            device=self.device,
+            dtype=torch.float32,
+        )
+
+        # rotate all base orientations
+        self.motion_base_rots_input = quat_mul(
+            q_correction.unsqueeze(0).repeat(self.motion_base_rots_input.shape[0], 1),
+            self.motion_base_rots_input,
+        )
+
+        # rotate base positions
+        pos = self.motion_base_poss_input
+        pos_xy = pos[:, :2]
+        c = torch.cos(-yaw)
+        s = torch.sin(-yaw)
+        R = torch.tensor([[c, -s], [s, c]], device=self.device)
+        pos[:, :2] = (R @ pos_xy.T).T
+        self.motion_base_poss_input = pos
 
     def _load_motion(self):
         """Loads the motion from the csv file."""
@@ -265,7 +396,20 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # set root state
         root_states = robot.data.default_root_state.clone()
         root_states[:, :3] = motion_base_pos
-        root_states[:, :2] += scene.env_origins[:, :2]
+
+        # root_states[:, 0] = root_states[:, 0]*0
+        root_states[:, 2] = root_states[:, 2]*0 + 0.92
+
+        # motion_base_rot[:, 0] = motion_base_rot[:, 0] * 0 + 0.75
+        # motion_base_rot[:, 1] = motion_base_rot[:, 1] * 0
+        # motion_base_rot[:, 2] = motion_base_rot[:, 2] * 0
+        # motion_base_rot[:, 3] = motion_base_rot[:, 3] * 0 + 0.75
+        # motion_base_ang_vel = motion_base_ang_vel * 0 
+
+        # root_states[:, :2] += scene.env_origins[:, :2]
+
+        # print(motion_base_rot)
+        
         root_states[:, 3:7] = motion_base_rot
         root_states[:, 7:10] = motion_base_lin_vel
         root_states[:, 10:] = motion_base_ang_vel
@@ -281,7 +425,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         scene.update(sim.get_physics_dt())
 
         pos_lookat = root_states[0, :3].cpu().numpy()
-        sim.set_camera_view(pos_lookat + np.array([2.50, 0.0, 0.5]), pos_lookat)
+        sim.set_camera_view(pos_lookat + np.array([3.50, 0.0, 0.5]), pos_lookat)
 
         if not file_saved:
             log["joint_pos"].append(robot.data.joint_pos[0, :].cpu().numpy().copy())

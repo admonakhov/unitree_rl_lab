@@ -216,7 +216,7 @@ class CommandsCfg:
                     "mocap/arcus/irina/left_rot.npz",
                     "mocap/arcus/irina/right_rot.npz", 
                     # "mocap/arcus/andrey/slow_forward.npz",
-                    "mocap/arcus/andrey/medium_forward.npz",
+                    "mocap/arcus/andrey/medium_forward_normal.npz",
                     # "mocap/arcus/andrey/fast_forward.npz",
                     # "mocap/arcus/andrey/forward_2.npz",  
                     "mocap/arcus/andrey/back.npz",
@@ -226,7 +226,9 @@ class CommandsCfg:
                     # "mocap/arcus/monakhov/rot1.npz", 
                     # "mocap/arcus/monakhov/rot2.npz", 
                     ],
-
+        velocity_smoothing_alpha = 0.975,
+        velocity_factor = 1.5,
+        motion_assignment = 'round_robin', # round_robin or random
         anchor_body_name="torso_link",
         resampling_time_range=(50.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
@@ -250,7 +252,7 @@ class CommandsCfg:
         joint_position_range=(-0.02, 0.02),  # Further reduced for better arm tracking
         velocity_command_name="base_velocity",  # Link motion direction to velocity command for directional consistency
         set_velocity_command=True,  # Set the velocity command to match the current mocap velocity
-
+        
         # Bodies to track
         body_names=[
             "pelvis",
@@ -355,7 +357,7 @@ class RewardsCfg:
     # joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.015)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.025)
     joint_limit = RewTerm(
         func=mdp.joint_pos_limits,
         weight=-10.0,
@@ -411,7 +413,7 @@ class RewardsCfg:
     )
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
-        weight=1.5,
+        weight=1,
         params={"command_name": "motion", "std": 0.3},
     )
     motion_body_ori = RewTerm(

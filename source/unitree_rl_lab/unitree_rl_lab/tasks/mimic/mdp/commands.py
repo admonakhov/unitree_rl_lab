@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 class MotionLoader:
-    def __init__(self, motion_file: str, body_indexes: Sequence[int], device: str = "cpu"):
+    def __init__(self, motion_file: str, body_indexes: Sequence[int], device: str = "cpu", ):
         assert os.path.isfile(motion_file), f"Invalid file path: {motion_file}"
         data = np.load(motion_file)
         self.fps = data["fps"]
@@ -118,6 +118,7 @@ class MotionCommand(CommandTerm):
 
         # Smoothed velocity command (for optional EMA smoothing)
         self.velocity_command_smoothed = torch.zeros(self.num_envs, 3, device=self.device)
+        self.threshold_cmd = 0.1
 
     @property
     def command(self) -> torch.Tensor:  # TODO Consider again if this is the best observation
@@ -312,6 +313,12 @@ class MotionCommand(CommandTerm):
     def _resample_command(self, env_ids: Sequence[int]):
         if len(env_ids) == 0:
             return
+        if getattr(self.cfg, "motion_assignment", "round_robin") == "random":
+            if len(self.motions) > 1:
+                self.motion_ids[env_ids] = torch.randint(
+                    len(self.motions), (len(env_ids),), device=self.device
+                )
+
         self._adaptive_sampling(env_ids)
 
         root_pos = self.body_pos_w[:, 0].clone()
@@ -396,10 +403,12 @@ class MotionCommand(CommandTerm):
                     + (1.0 - self.cfg.velocity_smoothing_alpha) * target_vel
                 )
 
-                velocity_commands[:, 0] = torch.trunc(self.velocity_command_smoothed[:, 0] * 25 / 1.5) / 25
+                velocity_commands[:, 0] = torch.trunc(self.velocity_command_smoothed[:, 0] * 25 / self.cfg.velocity_factor) / 25
                 velocity_commands[:, 1] = torch.trunc(self.velocity_command_smoothed[:, 1] * 10) / 10
                 velocity_commands[:, 2] = torch.trunc(self.velocity_command_smoothed[:, 2] * 5) / 5
-                
+
+                # velocity_commands = torch.where(torch.abs(velocity_commands) < self.threshold_cmd, torch.zeros_like(velocity_commands), velocity_commands)
+
             # Use original delta orientation (frames oriented relative to robot's current pose)
             delta_ori_w = original_delta_ori_w
         else:
@@ -511,6 +520,7 @@ class MotionCommandCfg(CommandTermCfg):
     set_velocity_command: bool = False  # If True, set the velocity command to match the current mocap velocity
     zero_command_prob: float = 0.0  # Probability of setting velocity commands to zero (for balance training)
     velocity_smoothing_alpha: float = 0.975  # EMA alpha for smoothing velocity commands (0..1)
+    velocity_factor: float = 1.5 
     motion_assignment: str = "round_robin"  # 'round_robin' or 'random' per-env motion file assignment
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")
