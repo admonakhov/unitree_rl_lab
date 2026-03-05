@@ -104,8 +104,8 @@ class MotionLoader:
         self.frame_range = frame_range
         self._load_motion()
         # self._remove_lateral_motion()
-        self._align_motion_to_x_axis()
-        self._straighten_motion()   
+        # self._align_motion_to_x_axis()
+        # self._straighten_motion()   
         self._interpolate_motion()
         # self._smooth_rotations()
         self._compute_velocities()
@@ -365,7 +365,6 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     # Extract scene entities
     robot = scene["robot"]
     robot_joint_indexes = robot.find_joints(scene.cfg.robot.joint_sdk_names, preserve_order=True)[0]
-
     # ------- data logger -------------------------------------------------------
     log = {
         "fps": [args_cli.output_fps],
@@ -418,8 +417,9 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # set joint state
         joint_pos = robot.data.default_joint_pos.clone()
         joint_vel = robot.data.default_joint_vel.clone()
-        joint_pos[:, robot_joint_indexes] = motion_dof_pos[:,:23]
-        joint_vel[:, robot_joint_indexes] = motion_dof_vel[:,:23]
+
+        joint_pos[:, robot_joint_indexes] = motion_dof_pos
+        joint_vel[:, robot_joint_indexes] = motion_dof_vel
         robot.write_joint_state_to_sim(joint_pos, joint_vel)
         sim.render()  # We don't want physic (sim.step())
         scene.update(sim.get_physics_dt())

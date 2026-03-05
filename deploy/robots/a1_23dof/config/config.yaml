@@ -8,9 +8,9 @@ FSM:
       id: 3
       type: RLBase
 
-    # Mimic_Dance_102: # uncomment to enable
-    #   id: 101
-    #   type: Mimic
+    Mimic_Dance_102: # uncomment to enable
+      id: 101
+      type: Mimic
 
   Passive:
     transitions: 
@@ -67,9 +67,9 @@ FSM:
     transitions: 
       Passive: LT + B.on_pressed
       Velocity: RB + X.on_pressed
-    fps: 60
-    motion_file: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
-    # motion_file: cnfig/policy/mimic/gangnam_style/params/G1_gangnam_style_V01.bvh_60hz.csv
-    policy_dir: /home/ant/UniTree/gym/unitree_rl_lab/logs/rsl_rl/unitree_arcus_a1_v0_mimic
+    fps: 30
+    motion_file: ../../../mocap/arcus/actors/arcus_a1.csv
+    policy_dir: ../../../logs/rsl_rl/unitree_arcus_a1_v0_mimic
+    
     time_start: 0
-    time_end: 60.0
+    time_end: 20.0
