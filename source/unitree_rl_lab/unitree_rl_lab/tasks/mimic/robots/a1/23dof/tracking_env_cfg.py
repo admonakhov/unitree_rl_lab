@@ -22,8 +22,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import unitree_rl_lab.tasks.mimic.mdp as mdp
-from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_MIMIC_ACTION_SCALE
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_CFG as ROBOT_CFG
 
 ##
 # Scene definition
@@ -88,7 +87,7 @@ class CommandsCfg:
         asset_name="robot",
         # generate npz file before training
         # python python scripts/mimic/csv_to_npz.py -f path/to/G1_Take_102.bvh_60hz.csv --input_fps 60
-        motion_file=f"{os.path.dirname(__file__)}/G1_Take_102.bvh_60hz.npz",
+        motion_file= "mocap/arcus/actors/man.npz",
         anchor_body_name="torso_link",
         resampling_time_range=(1.0e9, 1.0e9),
         debug_vis=True,
@@ -104,19 +103,19 @@ class CommandsCfg:
         joint_position_range=(-0.1, 0.1),
         body_names=[
             "pelvis",
+            "torso_link",
             "left_hip_roll_link",
             "left_knee_link",
             "left_ankle_roll_link",
             "right_hip_roll_link",
             "right_knee_link",
             "right_ankle_roll_link",
-            "torso_link",
             "left_shoulder_roll_link",
             "left_elbow_link",
-            "left_wrist_yaw_link",
+            "left_wrist_roll_rubber_hand",
             "right_shoulder_roll_link",
             "right_elbow_link",
-            "right_wrist_yaw_link",
+            "right_wrist_roll_rubber_hand",
         ],
     )
 
@@ -126,7 +125,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=UNITREE_G1_29DOF_MIMIC_ACTION_SCALE, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.15, use_default_offset=True
     )
 
 
@@ -174,16 +173,27 @@ class ObservationsCfg:
 class EventCfg:
     """Configuration for events."""
 
-    # startup
+    # startup randomize physics materials on robot bodies
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.6),
-            "dynamic_friction_range": (0.3, 1.2),
-            "restitution_range": (0.0, 0.5),
+            "static_friction_range": (0.2, 1.0),
+            "dynamic_friction_range": (0.2, 1.0),
+            "restitution_range": (0.0, 0.1), # Упругость столкновений
             "num_buckets": 64,
+        },
+    )
+
+    
+    add_base_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+            "mass_distribution_params": (-3.0, 3.0),
+            "operation": "add",
         },
     )
 
@@ -192,7 +202,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-            "pos_distribution_params": (-0.01, 0.01),
+            "pos_distribution_params": (-0.1, 0.1),
             "operation": "add",
         },
     )
@@ -202,7 +212,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "com_range": {"x": (-0.025, 0.025), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
+            "com_range": {"x": (-0.075, 0.075), "y": (-0.1, 0.1), "z": (-0.1, 0.05)},
         },
     )
 
@@ -296,9 +306,9 @@ class TerminationsCfg:
             "threshold": 0.25,
             "body_names": [
                 "left_ankle_roll_link",
-                "right_ankle_roll_link",
+                "left_wrist_roll_rubber_hand",
                 "left_wrist_yaw_link",
-                "right_wrist_yaw_link",
+                "right_wrist_roll_rubber_hand",
             ],
         },
     )

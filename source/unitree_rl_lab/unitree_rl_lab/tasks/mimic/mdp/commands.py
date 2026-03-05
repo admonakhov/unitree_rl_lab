@@ -118,7 +118,6 @@ class MotionCommand(CommandTerm):
 
         # Smoothed velocity command (for optional EMA smoothing)
         self.velocity_command_smoothed = torch.zeros(self.num_envs, 3, device=self.device)
-        self.threshold_cmd = 0.1
 
     @property
     def command(self) -> torch.Tensor:  # TODO Consider again if this is the best observation
@@ -404,11 +403,11 @@ class MotionCommand(CommandTerm):
                 )
 
                 velocity_commands[:, 0] = torch.trunc(self.velocity_command_smoothed[:, 0] * 25 / self.cfg.velocity_factor) / 25
-                velocity_commands[:, 1] = torch.trunc(self.velocity_command_smoothed[:, 1] * 10) / 10
-                velocity_commands[:, 2] = torch.trunc(self.velocity_command_smoothed[:, 2] * 5) / 5
+                velocity_commands[:, 1] = torch.trunc(self.velocity_command_smoothed[:, 1] * 25) / 25
+                velocity_commands[:, 2] = torch.trunc(self.velocity_command_smoothed[:, 2] * 25) / 25
 
-                # velocity_commands = torch.where(torch.abs(velocity_commands) < self.threshold_cmd, torch.zeros_like(velocity_commands), velocity_commands)
-
+                velocity_commands = torch.where(torch.abs(velocity_commands) <= self.cfg.threshold_velocity_cmd, torch.zeros_like(velocity_commands), velocity_commands)
+                # print(velocity_commands)
             # Use original delta orientation (frames oriented relative to robot's current pose)
             delta_ori_w = original_delta_ori_w
         else:
@@ -439,10 +438,10 @@ class MotionCommand(CommandTerm):
         self.body_quat_relative_w = quat_mul(delta_ori_w, body_quat_w)
         self.body_pos_relative_w = delta_pos_w + quat_apply(delta_ori_w, body_pos_w - anchor_pos_w_repeat)
 
-        self.bin_failed_count = (
-            self.cfg.adaptive_alpha * self._current_bin_failed + (1 - self.cfg.adaptive_alpha) * self.bin_failed_count
-        )
-        self._current_bin_failed.zero_()
+        # self.bin_failed_count = (
+        #     self.cfg.adaptive_alpha * self._current_bin_failed + (1 - self.cfg.adaptive_alpha) * self.bin_failed_count
+        # )
+        # self._current_bin_failed.zero_()
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         if debug_vis:
@@ -520,7 +519,8 @@ class MotionCommandCfg(CommandTermCfg):
     set_velocity_command: bool = False  # If True, set the velocity command to match the current mocap velocity
     zero_command_prob: float = 0.0  # Probability of setting velocity commands to zero (for balance training)
     velocity_smoothing_alpha: float = 0.975  # EMA alpha for smoothing velocity commands (0..1)
-    velocity_factor: float = 1.5 
+    velocity_factor: float = 1.5
+    threshold_velocity_cmd = 0.1
     motion_assignment: str = "round_robin"  # 'round_robin' or 'random' per-env motion file assignment
 
     anchor_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(prim_path="/Visuals/Command/pose")

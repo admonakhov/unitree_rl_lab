@@ -213,23 +213,55 @@ class CommandsCfg:
                     # "mocap/arcus/irina/start_n_stop.npz", 
                     # "mocap/arcus/irina/forward.npz", 
                     # "mocap/arcus/irina/back.npz", 
-                    "mocap/arcus/irina/left_rot.npz",
-                    "mocap/arcus/irina/right_rot.npz", 
+                    # "mocap/arcus/irina/left_rot.npz",
+                    # "mocap/arcus/irina/right_rot.npz", 
                     # "mocap/arcus/andrey/slow_forward.npz",
-                    "mocap/arcus/andrey/medium_forward_normal.npz",
+                    "mocap/arcus/andrey/medium_forward_faster.npz",
+                    # "mocap/arcus/andrey/medium_forward_fastest.npz",
+                    # "mocap/arcus/andrey/medium_forward_normal.npz",
                     # "mocap/arcus/andrey/fast_forward.npz",
                     # "mocap/arcus/andrey/forward_2.npz",  
-                    "mocap/arcus/andrey/back.npz",
+                    # "mocap/arcus/andrey/back.npz",
                     "mocap/arcus/andrey/arc1.npz",
                     "mocap/arcus/andrey/arc2.npz",    
                     "mocap/arcus/monakhov/stand.npz", 
                     # "mocap/arcus/monakhov/rot1.npz", 
                     # "mocap/arcus/monakhov/rot2.npz", 
+                    "mocap/arcus/andrey/slow/arc1_35fps.npz",
+                    "mocap/arcus/andrey/slow/arc2_35fps.npz",
+                    "mocap/arcus/andrey/slow/back_35fps.npz",
+                    "mocap/arcus/andrey/slow/rot1_35fps.npz",
+                    "mocap/arcus/andrey/slow/rot2_35fps.npz",
+                    "mocap/arcus/andrey/slow/walk2_35fps.npz",
+                    # "mocap/arcus/andrey/slow/side1_35fps.npz",
+                    # "mocap/arcus/andrey/slow/side2_35fps.npz",
+                    "mocap/arcus/monakhov/stand.npz", 
+                    # "mocap/arcus/andrey/slow/arc1_30fps.npz",
+                    # "mocap/arcus/andrey/slow/arc2_30fps.npz",
+                    # "mocap/arcus/andrey/slow/back_30fps.npz",
+                    # "mocap/arcus/andrey/slow/rot1_30fps.npz",
+                    # "mocap/arcus/andrey/slow/rot2_30fps.npz",
+                    # "mocap/arcus/andrey/slow/walk2_30fps.npz",
+                    # "mocap/arcus/andrey/slow/side1_30fps.npz",
+                    # "mocap/arcus/andrey/slow/side2_30fps.npz",
+                    # "mocap/arcus/andrey/slow/arc1_40fps.npz",
+                    # "mocap/arcus/andrey/slow/arc2_40fps.npz",
+                    # "mocap/arcus/andrey/slow/back_40fps.npz",
+                    # "mocap/arcus/andrey/slow/rot1_40fps.npz",
+                    # "mocap/arcus/andrey/slow/rot2_40fps.npz",
+                    # "mocap/arcus/andrey/slow/walk2_40fps.npz",
+                    # "mocap/arcus/andrey/slow/side1_40fps.npz",
+                    # "mocap/arcus/andrey/slow/side2_40fps.npz",
                     ],
-        velocity_smoothing_alpha = 0.975,
-        velocity_factor = 1.5,
+
+        velocity_smoothing_alpha = 0.98,
+        velocity_factor = 1.4,
         motion_assignment = 'round_robin', # round_robin or random
-        anchor_body_name="torso_link",
+        anchor_body_name = "torso_link",
+
+        adaptive_alpha = 0.000,
+        adaptive_uniform_ratio = 1,
+        threshold_velocity_cmd = 0.0,
         resampling_time_range=(50.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
         
@@ -349,12 +381,11 @@ class RewardsCfg:
     # stronger angular velocity tracking to improve turning behavior
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp,
-        weight=0.5, 
+        weight=1, 
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
     # -- base
-    # joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0015)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     joint_torque = RewTerm(func=mdp.joint_torques_l2, weight=-1e-5)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.025)
@@ -364,29 +395,6 @@ class RewardsCfg:
         params={"asset_cfg":
                 SceneEntityCfg("robot", joint_names=[r"^(?!left_knee_joint$)(?!right_knee_joint$).+$"])},
     )
-
-    # knee_limit = RewTerm(
-    #     func=mdp.joint_pos_limits,
-    #     weight=-1.0,
-    #     params={"asset_cfg":
-    #             SceneEntityCfg("robot", joint_names=["left_knee_joint", "right_knee_joint"])},
-    # )
-
-    # action_l2 = RewTerm(
-    #     func=mdp.action_l2,
-    #     weight=-1e-4
-    # )
-
-    # feet_clearance = RewTerm(
-    #     func=mdp.foot_clearance_reward,
-    #     weight=0.2,
-    #     params={
-    #         "std": 0.05,
-    #         "tanh_mult": 2.0,
-    #         "target_height": 0.1,
-    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
-    #     },
-    # )
 
 
     feet_slide = RewTerm(
@@ -399,7 +407,6 @@ class RewardsCfg:
     )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1)
-    # base_height = RewTerm(func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.815})
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,

@@ -103,7 +103,7 @@ class MotionLoader:
         self.device = device
         self.frame_range = frame_range
         self._load_motion()
-        self._remove_lateral_motion()
+        # self._remove_lateral_motion()
         self._align_motion_to_x_axis()
         self._straighten_motion()   
         self._interpolate_motion()
