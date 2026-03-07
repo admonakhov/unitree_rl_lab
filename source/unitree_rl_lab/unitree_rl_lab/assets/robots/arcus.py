@@ -499,3 +499,81 @@ ARCUS_A1_23DOF_RETARGETING_CFG = UnitreeArticulationCfg(
 
     ],
 )
+
+EFFORT_P60N30 = 60.0
+EFFORT_P90N20 = 90.0
+
+VELOCITY_P60N30 = 18
+VELOCITY_P90N20 = 20
+
+ARMATURE_P60N30 = 1.67e-5
+ARMATURE_P90N20 = 7.16e-5
+
+
+STIFFNESS_P60N30 = ARMATURE_P60N30 * NATURAL_FREQ**2  
+STIFFNESS_P90N20 = ARMATURE_P90N20 * NATURAL_FREQ**2 
+
+
+DAMPING_P60N30 = 2.0 * DAMPING_RATIO * ARMATURE_P60N30 * NATURAL_FREQ  
+DAMPING_P90N20 = 2.0 * DAMPING_RATIO * ARMATURE_P90N20 * NATURAL_FREQ  
+
+
+
+ARCUS_A2_12DOF_CFG = UnitreeArticulationCfg(
+    spawn=UnitreeUrdfFileCfg(
+        asset_path="robots/arcus/a2/a2_12.urdf",
+    ),
+
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 0.85),
+        joint_pos={
+            ".*_hip_pitch_joint": 0.0,
+            ".*_knee_joint": 0.0,
+            ".*_ankle_pitch_joint": 0.0,
+        },
+        joint_vel={".*": 0.0},
+    ),
+    soft_joint_pos_limit_factor=0.9,
+    actuators={
+        "P90N20": ImplicitActuatorCfg(
+            joint_names_expr=[".*_hip_pitch_.*", ".*_hip_yaw_.*", ".*_hip_roll_.*", ".*_knee_.*"],
+            effort_limit_sim=EFFORT_P90N20,
+            velocity_limit_sim=VELOCITY_P90N20,
+            stiffness={
+                ".*_hip_.*": 100.0,
+                ".*_knee_.*": 150.0,
+            },
+            damping={
+                ".*_hip_.*": 2.0,
+                ".*_knee_.*": 4.0,
+            },
+            armature=0.01,
+        ),
+        "P60N30": ImplicitActuatorCfg(
+            joint_names_expr=[
+                ".*_ankle_.*",
+            ],
+            effort_limit_sim=EFFORT_P60N30,
+            velocity_limit_sim=VELOCITY_P60N30,
+            stiffness=40.0,
+            damping={
+                ".*_ankle_.*": 2.0,
+            },
+            armature=0.01,
+        ),
+    },
+    joint_sdk_names=[
+        "left_hip_pitch_joint",
+        "left_hip_roll_joint",
+        "left_hip_yaw_joint",
+        "left_knee_joint",
+        "left_ankle_pitch_joint",
+        "left_ankle_roll_joint",
+        "right_hip_pitch_joint",
+        "right_hip_roll_joint",
+        "right_hip_yaw_joint",
+        "right_knee_joint",
+        "right_ankle_pitch_joint",
+        "right_ankle_roll_joint",
+    ],
+)
