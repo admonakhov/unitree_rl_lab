@@ -19,7 +19,13 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 from unitree_rl_lab.assets.robots.arcus import ARCUS_A2_12DOF_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_ACTION_SCALE
 from unitree_rl_lab.tasks.locomotion import mdp
+
+
+
+
+
 
 COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
@@ -168,7 +174,7 @@ class CommandsCfg:
         heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-0.1, 0.1)
+            lin_vel_x=(-0.3, 0.75), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.5, 0.5)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.5, 1.0), lin_vel_y=(-0.3, 0.3), ang_vel_z=(-0.2, 0.2)
@@ -181,7 +187,12 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale={'.*_hip_pitch_joint': 0.3,
+                                                       '.*_hip_roll_joint': 0.25,
+                                                       '.*_hip_yaw_joint': 0.25,
+                                                       '.*_knee_joint': 0.2,
+                                                       '.*_ankle_pitch_joint': 0.25,
+                                                       '.*_ankle_roll_joint': 0.25,}, use_default_offset=True
     )
 
 
@@ -293,20 +304,32 @@ class RewardsCfg:
 
     # -- robot
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.82})
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.95})
 
     # -- feet
     gait = RewTerm(
         func=mdp.feet_gait,
         weight=0.5,
         params={
-            "period": 0.8,
+            "period": 1,
             "offset": [0.0, 0.5],
             "threshold": 0.55,
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
         },
     )
+
+    knee_vel_penalty = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=-0.01,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[".*knee.*"]
+            )
+        },
+    )
+
     feet_slide = RewTerm(
         func=mdp.feet_slide,
         weight=-0.2,
@@ -319,9 +342,9 @@ class RewardsCfg:
         func=mdp.foot_clearance_reward,
         weight=1.0,
         params={
-            "std": 0.05,
+            "std": 0.15,
             "tanh_mult": 2.0,
-            "target_height": 0.1,
+            "target_height": 0.07,
             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
         },
     )

@@ -7,27 +7,22 @@ FSM:
     Velocity:
       id: 3
       type: RLBase
-
-    # Mimic_Dance_102: # uncomment to enable
-    #   id: 101
-    #   type: Mimic
-
   Passive:
     transitions: 
       FixStand: LT + up.on_pressed
     mode: [
       1,1,1,1,1,1,
       1,1,1,1,1,1,
-      1,0,0,
-      1,1,1,1,1,0,0,
-      1,1,1,1,1,0,0,
+      1,1,1,
+      1,1,1,1,1,1,1,
+      1,1,1,1,1,1,1,
     ]
     kd: [
       3,3,3,3,3,3,
       3,3,3,3,3,3,
-      3,0,0,
-      3,3,3,3,3,0,0,  
-      3,3,3,3,3,0,0,  
+      3,3,3,
+      3,3,3,3,3,3,3,  
+      3,3,3,3,3,3,3,  
     ]
   FixStand:
     transitions: 
@@ -36,16 +31,16 @@ FSM:
     kp: [
       100., 100., 100., 150., 40., 40.,
       100., 100., 100., 150., 40., 40.,
-      200,0,0,
-      40,40,40,40,40,0,0,
-      40,40,40,40,40,0,0,
+      200,200,200,
+      40,40,40,40,40,40,40,
+      40,40,40,40,40,40,40,
     ]
     kd: [
       2,2,2,4,2,2,
       2,2,2,4,2,2,
-      5,0,0,
-      10,10,10,10,10,0,0,
-      10,10,10,10,10,0,0,
+      5,5,5,
+      10,10,10,10,10,10,10,
+      10,10,10,10,10,10,10,
     ]
     ts: [0, 3]
     qs: [
@@ -60,16 +55,4 @@ FSM:
   Velocity:
     transitions: 
       Passive: LT + B.on_pressed
-      Mimic_Dance_102: LT(2s) + down.on_pressed
-    policy_dir: ../../../logs/rsl_rl/unitree_arcus_a2_v0_velocity
-
-  Mimic_Dance_102:
-    transitions: 
-      Passive: LT + B.on_pressed
-      Velocity: RB + X.on_pressed
-    fps: 30
-    motion_file: ../../../mocap/arcus/actors/arcus_a1.csv
-    policy_dir: ../../../logs/rsl_rl/unitree_arcus_a1_v0_mimic
-    
-    time_start: 0
-    time_end: 20.0
+    policy_dir: ../../../logs/rsl_rl/unitree_g1_23dof_velocity
