@@ -17,6 +17,9 @@ FSM:
     Mimic_Action_3:
       id: 103
       type: Mimic
+    Mimic_Action_4:
+      id: 104
+      type: Mimic
 
   Passive:
     transitions: 
@@ -39,6 +42,7 @@ FSM:
     transitions: 
       Passive: LT + B.on_pressed
       Velocity: RB + X.on_pressed
+      Mimic_Action_4: LT(2s) + down.on_pressed
     kp: [
       100., 100., 100., 150., 40., 40.,
       100., 100., 100., 150., 40., 40.,
@@ -72,6 +76,7 @@ FSM:
 
     policy_dir: config/policy/velocity
     # policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_v0_amp_velocity
+
   Mimic_Action_1:
     transitions: 
       Passive: LT + B.on_pressed
@@ -81,6 +86,7 @@ FSM:
     policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_mimic_dance_102
     time_start: 0
     time_end: 24.0
+
   Mimic_Action_2:
     transitions: 
       Passive: LT + B.on_pressed
@@ -98,6 +104,16 @@ FSM:
     fps: 60
     motion_file: ../../../mocap/g1/actors/frightened.csv
     policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_mimic_dance_102
+    time_start: 0
+    time_end: 24.0
+
+  Mimic_Action_4:
+    transitions: 
+      Passive: LT + B.on_pressed
+      Velocity: RB + X.on_pressed
+    fps: 60
+    motion_file: ../../../mocap/g1/actors/stand_up.csv
+    policy_dir: ../../../logs/rsl_rl/unitree_g1_29dof_stand_up
     time_start: 0
     time_end: 24.0
 
