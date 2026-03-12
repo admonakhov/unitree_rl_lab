@@ -508,7 +508,7 @@ VELOCITY_P90N20 = 20
 
 ARMATURE_P60N30 = 1.67e-5
 ARMATURE_P90N20 = 7.16e-5
-
+ARMATURE = 0.015
 
 STIFFNESS_P60N30 = ARMATURE_P60N30 * NATURAL_FREQ**2  
 STIFFNESS_P90N20 = ARMATURE_P90N20 * NATURAL_FREQ**2 
@@ -541,13 +541,13 @@ ARCUS_A2_12DOF_CFG = UnitreeArticulationCfg(
             velocity_limit_sim=VELOCITY_P90N20,
             stiffness={
                 ".*_hip_.*": 100.0,
-                ".*_knee_.*": 100.0,
+                ".*_knee_.*": 150.0,
             },
             damping={
                 ".*_hip_.*": 2.0,
-                ".*_knee_.*": 2.0,
+                ".*_knee_.*": 4.0,
             },
-            armature=0.01,
+            armature=ARMATURE,
         ),
         "P60N30": ImplicitActuatorCfg(
             joint_names_expr=[
@@ -559,7 +559,7 @@ ARCUS_A2_12DOF_CFG = UnitreeArticulationCfg(
             damping={
                 ".*_ankle_.*": 2.0,
             },
-            armature=0.01,
+            armature=ARMATURE,
         ),
     },
     joint_sdk_names=[
