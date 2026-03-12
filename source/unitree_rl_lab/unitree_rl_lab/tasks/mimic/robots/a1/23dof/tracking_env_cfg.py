@@ -88,7 +88,7 @@ class CommandsCfg:
         asset_name="robot",
         # generate npz file before training
         # python python scripts/mimic/csv_to_npz.py -f path/to/G1_Take_102.bvh_60hz.csv --input_fps 60
-        motion_file= "mocap/arcus/actors/arcus_a1.npz",
+        motion_file= "mocap/arcus/actors/man.npz",
         anchor_body_name="torso_link",
         resampling_time_range=(1.0e9, 1.0e9),
         debug_vis=True,
@@ -126,7 +126,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.2, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.3, use_default_offset=True
     )
 
 

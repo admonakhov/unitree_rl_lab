@@ -23,7 +23,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_RETARGETING_CFG as ROBOT_CFG
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
 from unitree_rl_lab.tasks.mimic.mdp.commands import MotionCommandCfg
@@ -210,58 +210,29 @@ class CommandsCfg:
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
         motion_file=[
-                    # "mocap/arcus/irina/start_n_stop.npz", 
-                    # "mocap/arcus/irina/forward.npz", 
-                    # "mocap/arcus/irina/back.npz", 
-                    # "mocap/arcus/irina/left_rot.npz",
-                    # "mocap/arcus/irina/right_rot.npz", 
-                    # "mocap/arcus/andrey/slow_forward.npz",
-                    "mocap/arcus/andrey/medium_forward_faster.npz",
-                    # "mocap/arcus/andrey/medium_forward_fastest.npz",
-                    # "mocap/arcus/andrey/medium_forward_normal.npz",
-                    # "mocap/arcus/andrey/fast_forward.npz",
-                    # "mocap/arcus/andrey/forward_2.npz",  
-                    # "mocap/arcus/andrey/back.npz",
-                    "mocap/arcus/andrey/arc1.npz",
-                    "mocap/arcus/andrey/arc2.npz",    
-                    "mocap/arcus/monakhov/stand.npz", 
-                    # "mocap/arcus/monakhov/rot1.npz", 
-                    # "mocap/arcus/monakhov/rot2.npz", 
-                    "mocap/arcus/andrey/slow/arc1_35fps.npz",
-                    "mocap/arcus/andrey/slow/arc2_35fps.npz",
-                    "mocap/arcus/andrey/slow/back_35fps.npz",
-                    "mocap/arcus/andrey/slow/rot1_35fps.npz",
-                    "mocap/arcus/andrey/slow/rot2_35fps.npz",
-                    "mocap/arcus/andrey/slow/walk2_35fps.npz",
-                    # "mocap/arcus/andrey/slow/side1_35fps.npz",
-                    # "mocap/arcus/andrey/slow/side2_35fps.npz",
-                    "mocap/arcus/monakhov/stand.npz", 
-                    # "mocap/arcus/andrey/slow/arc1_30fps.npz",
-                    # "mocap/arcus/andrey/slow/arc2_30fps.npz",
-                    # "mocap/arcus/andrey/slow/back_30fps.npz",
-                    # "mocap/arcus/andrey/slow/rot1_30fps.npz",
-                    # "mocap/arcus/andrey/slow/rot2_30fps.npz",
-                    # "mocap/arcus/andrey/slow/walk2_30fps.npz",
-                    # "mocap/arcus/andrey/slow/side1_30fps.npz",
-                    # "mocap/arcus/andrey/slow/side2_30fps.npz",
-                    # "mocap/arcus/andrey/slow/arc1_40fps.npz",
-                    # "mocap/arcus/andrey/slow/arc2_40fps.npz",
-                    # "mocap/arcus/andrey/slow/back_40fps.npz",
-                    # "mocap/arcus/andrey/slow/rot1_40fps.npz",
-                    # "mocap/arcus/andrey/slow/rot2_40fps.npz",
-                    # "mocap/arcus/andrey/slow/walk2_40fps.npz",
-                    # "mocap/arcus/andrey/slow/side1_40fps.npz",
-                    # "mocap/arcus/andrey/slow/side2_40fps.npz",
+                    "mocap/arcus/andrey/forward_fast_30fps.npz",
+                    "mocap/arcus/andrey/arc1_fast_30fps.npz",
+                    "mocap/arcus/andrey/arc2_fast_30fps.npz",    
+                    "mocap/arcus/andrey/stand.npz", 
+                    "mocap/arcus/andrey/slow/arc1_30fps.npz",
+                    "mocap/arcus/andrey/slow/arc2_30fps.npz",
+                    "mocap/arcus/andrey/slow/back_30fps.npz",
+                    "mocap/arcus/andrey/slow/rot1_30fps.npz",
+                    "mocap/arcus/andrey/slow/rot2_30fps.npz",
+                    "mocap/arcus/andrey/slow/walk2_30fps.npz",
+                    "mocap/arcus/andrey/slow/walk1_30fps.npz",
+                    "mocap/arcus/andrey/slow/side1_30fps.npz",
+                    "mocap/arcus/andrey/slow/side2_30fps.npz",
                     ],
 
-        velocity_smoothing_alpha = 0.98,
-        velocity_factor = 1.4,
+        velocity_smoothing_alpha = 0.97,
+        velocity_factor = 1.1,
         motion_assignment = 'round_robin', # round_robin or random
         anchor_body_name = "torso_link",
 
         adaptive_alpha = 0.000,
         adaptive_uniform_ratio = 1,
-        threshold_velocity_cmd = 0.0,
+        threshold_velocity_cmd = 0.16,
         resampling_time_range=(50.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
         
@@ -313,7 +284,38 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.15, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], 
+        scale={
+        "left_hip_pitch_joint":0.15,
+        "left_hip_roll_joint":0.15,
+        "left_hip_yaw_joint":0.15,
+        "left_knee_joint":0.15,
+        "left_ankle_pitch_joint":0.15,
+        "left_ankle_roll_joint":0.15,
+        "right_hip_pitch_joint":0.15,
+        "right_hip_roll_joint":0.15,
+        "right_hip_yaw_joint":0.15,
+        "right_knee_joint":0.15,
+        "right_ankle_pitch_joint":0.15,
+        "right_ankle_roll_joint":0.15,
+        "waist_yaw_joint":0.25,
+        "waist_roll_joint":0,
+        "waist_pitch_joint":0,
+        "left_shoulder_pitch_joint":0.15,
+        "left_shoulder_roll_joint":0.15,
+        "left_shoulder_yaw_joint":0.15,
+        "left_elbow_joint":0.15,
+        "left_wrist_roll_joint":0.15,
+        "left_wrist_pitch_joint":0,
+        "left_wrist_yaw_joint":0,
+        "right_shoulder_pitch_joint":0.15,
+        "right_shoulder_roll_joint":0.15,
+        "right_shoulder_yaw_joint":0.15,
+        "right_elbow_joint":0.15,
+        "right_wrist_roll_joint":0.15,
+        "right_wrist_pitch_joint":0,
+        "right_wrist_yaw_joint":0,},
+        use_default_offset=True
     )
 
 
@@ -403,6 +405,20 @@ class RewardsCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
+        },
+    )
+
+
+    joint_deviation_waist = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=0.05,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[
+                    "waist_yaw_joint",
+                ],
+            )
         },
     )
 

@@ -250,7 +250,7 @@
           rgba="0.75294 0.75294 0.75294 1" />
       </material>
     </visual>
-    <!--    <collision>
+       <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -258,7 +258,7 @@
         <mesh
           filename="meshes/left_knee_link.STL" />
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint name="left_knee_joint"
     type="revolute">
@@ -628,7 +628,7 @@
           rgba="0.75294 0.75294 0.75294 1" />
       </material>
     </visual>
-    <!--    <collision>
+       <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -636,7 +636,7 @@
         <mesh
           filename="meshes/right_knee_link.STL" />
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint name="right_knee_joint"
     type="revolute">

@@ -88,10 +88,10 @@ class CommandsCfg:
         asset_name="robot",
         # generate npz file before training
         # python python scripts/mimic/csv_to_npz.py -f path/to/G1_Take_102.bvh_60hz.csv --input_fps 60
-        motion_file=["mocap/g1/actors/move_over.npz", "mocap/g1/actors/move_over2.npz", "mocap/g1/actors/frightened.npz"],
+        motion_file=["mocap/g1/actors/stand_up.npz"],
         anchor_body_name="torso_link",
-        adaptive_alpha = 0.000,
-        adaptive_uniform_ratio = 1,
+        # adaptive_alpha = 0.000,
+        # adaptive_uniform_ratio = 1,
         resampling_time_range=(1.0e9, 1.0e9),
         debug_vis=True,
         pose_range={
@@ -263,19 +263,19 @@ class RewardsCfg:
         params={"command_name": "motion", "std": 3.14},
     )
 
-    undesired_contacts = RewTerm(
-        func=mdp.undesired_contacts,
-        weight=-0.1,
-        params={
-            "sensor_cfg": SceneEntityCfg(
-                "contact_forces",
-                body_names=[
-                    r"^(?!left_ankle_roll_link$)(?!right_ankle_roll_link$)(?!left_wrist_yaw_link$)(?!right_wrist_yaw_link$).+$"
-                ],
-            ),
-            "threshold": 1.0,
-        },
-    )
+    # undesired_contacts = RewTerm(
+    #     func=mdp.undesired_contacts,
+    #     weight=-0.1,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg(
+    #             "contact_forces",
+    #             body_names=[
+    #                 r"^(?!left_ankle_roll_link$)(?!right_ankle_roll_link$)(?!left_wrist_yaw_link$)(?!right_wrist_yaw_link$).+$"
+    #             ],
+    #         ),
+    #         "threshold": 1.0,
+    #     },
+    # )
 
 
 @configclass
@@ -285,11 +285,11 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     anchor_pos = DoneTerm(
         func=mdp.bad_anchor_pos_z_only,
-        params={"command_name": "motion", "threshold": 0.25},
+        params={"command_name": "motion", "threshold": 0.15},
     )
     anchor_ori = DoneTerm(
         func=mdp.bad_anchor_ori,
-        params={"asset_cfg": SceneEntityCfg("robot"), "command_name": "motion", "threshold": 0.8},
+        params={"asset_cfg": SceneEntityCfg("robot"), "command_name": "motion", "threshold": 0.6},
     )
     ee_body_pos = DoneTerm(
         func=mdp.bad_motion_body_pos_z_only,
