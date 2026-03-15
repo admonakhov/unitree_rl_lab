@@ -69,7 +69,7 @@ FSM:
       Velocity: RB + X.on_pressed
     fps: 30
     motion_file: ../../../mocap/arcus/actors/arcus_a1.csv
-    policy_dir: ../../../logs/rsl_rl/unitree_arcus_a1_v0_mimic
+    policy_dir: ../../../logs/rsl_rl/arcus_a1_v0_mimic
     
     time_start: 0
     time_end: 20.0

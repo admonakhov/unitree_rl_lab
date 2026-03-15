@@ -210,7 +210,7 @@ class CommandsCfg:
         heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-0.1, 0.1)
+            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-0.5, 0.5)
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0.5, 1.0), lin_vel_y=(-0.5, 0.5), ang_vel_z=(-0.5, 0.5)
@@ -303,38 +303,17 @@ class RewardsCfg:
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-5.0)
     energy = RewTerm(func=mdp.energy, weight=-2e-5)
 
-    # joint_deviation_arms = RewTerm(
-    #     func=mdp.joint_deviation_l1,
-    #     weight=-0.1,
-    #     params={
-    #         "asset_cfg": SceneEntityCfg(
-    #             "robot",
-    #             joint_names=[
-    #                 ".*_shoulder_.*_joint",
-    #                 ".*_elbow_joint",
-    #                 ".*_wrist_.*",
-    #             ],
-    #         )
-    #     },
-    # )
-    # joint_deviation_waists = RewTerm(
-    #     func=mdp.joint_deviation_l1,
-    #     weight=-1,
-    #     params={
-    #         "asset_cfg": SceneEntityCfg(
-    #             "robot",
-    #             joint_names=[
-    #                 "waist.*",
-    #             ],
-    #         )
-    #     },
-    # )
     joint_deviation_legs = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-0.7,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     )
-
+    
+    joint_deviation_legs = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=-0.7,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*knee_joint"])},
+    )
     # joint_pos_penalty = RewTerm(
     #     func=mdp.joint_pos_penalty,
     #     weight=-1,
@@ -382,7 +361,7 @@ class RewardsCfg:
         weight=0.5,#1.2,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_roll.*"),
-            "period": 1.4,
+            "period": 0.9,
         },
     )
 
