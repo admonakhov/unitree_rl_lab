@@ -17,3 +17,14 @@ def gait_phase(env: ManagerBasedRLEnv, period: float) -> torch.Tensor:
     phase[:, 0] = torch.sin(global_phase * torch.pi * 2.0)
     phase[:, 1] = torch.cos(global_phase * torch.pi * 2.0)
     return phase
+
+
+
+def contact_mask(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,             
+) -> torch.Tensor:
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    contact_mask = (contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2]) > 5
+
+    return contact_mask

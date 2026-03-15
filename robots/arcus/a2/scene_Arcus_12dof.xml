@@ -1,5 +1,5 @@
 <mujoco model="a1 scene">
-  <include file="a2_12.xml"/>
+  <include file="acrus2_v0.xml"/>
 
   <statistic center="1.0 0.7 1.0" extent="0.8"/>
 

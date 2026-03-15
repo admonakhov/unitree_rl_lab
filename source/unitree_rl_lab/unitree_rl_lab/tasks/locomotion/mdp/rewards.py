@@ -223,3 +223,38 @@ def joint_mirror(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, mirror_joint
         )
     reward *= 1 / len(mirror_joints) if len(mirror_joints) > 0 else 0
     return reward
+
+
+
+
+def feet_contact_number(
+    env: ManagerBasedRLEnv,
+    period: float,
+    sensor_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Isaac Lab 风格的步态接触数奖励。"""
+
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+    global_phase = (env.episode_length_buf * env.step_dt) % period / period
+    
+    # return float mask 1 is stance, 0 is swing
+    phase = global_phase
+    sin_pos = torch.sin(2 * torch.pi * phase)
+    # Add double support phase
+    stance_mask = torch.zeros((env.num_envs, 2), device=env.device)
+    # left foot stance
+    stance_mask[:, 0] = sin_pos >= 0
+    # right foot stance
+    stance_mask[:, 1] = sin_pos < 0
+
+    cmd_norm = torch.norm(env.command_manager.get_command("base_velocity"), dim=1)
+
+    stance_mask[:, 0][cmd_norm < 0.02] = 1
+    stance_mask[:, 1][cmd_norm < 0.02] = 1
+
+    contact = torch.abs(contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2]) > 5
+
+    reward = torch.where(contact == stance_mask, 1.0, -0.3)
+
+    return torch.mean(reward, dim=1)

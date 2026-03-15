@@ -508,7 +508,7 @@ VELOCITY_P90N20 = 20
 
 ARMATURE_P60N30 = 1.67e-5
 ARMATURE_P90N20 = 7.16e-5
-ARMATURE = 0.015
+ARMATURE = 0.02863
 
 STIFFNESS_P60N30 = ARMATURE_P60N30 * NATURAL_FREQ**2  
 STIFFNESS_P90N20 = ARMATURE_P90N20 * NATURAL_FREQ**2 
@@ -521,7 +521,7 @@ DAMPING_P90N20 = 2.0 * DAMPING_RATIO * ARMATURE_P90N20 * NATURAL_FREQ
 
 ARCUS_A2_12DOF_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path="robots/arcus/a2/a2_12.urdf",
+        asset_path="robots/arcus/a2/acrus2_v0.urdf",
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(

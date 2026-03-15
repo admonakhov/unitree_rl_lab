@@ -23,11 +23,6 @@ from unitree_rl_lab.assets.robots.arcus import ARCUS_A2_12DOF_CFG as ROBOT_CFG
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
 
-
-
-
-
-
 COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=20.0,
@@ -95,14 +90,14 @@ class RobotSceneCfg(InteractiveSceneCfg):
 class EventCfg:
     """Configuration for events."""
 
-    # startup
+    # startup    
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.1, 1.0),
-            "dynamic_friction_range": (0.1, 1.0),
+            "static_friction_range": (0.3, 1.0),
+            "dynamic_friction_range": (0.3, 1.0),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
@@ -112,8 +107,8 @@ class EventCfg:
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "mass_distribution_params": (0, 2.0),
+            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+            "mass_distribution_params": (-1.0, 3.0),
             "operation": "add",
         },
     )
@@ -123,9 +118,9 @@ class EventCfg:
         func=mdp.apply_external_force_torque,
         mode="reset",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "force_range": (-5, 5),
-            "torque_range": (-0.5, 0.5),
+            "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
+            "force_range": (0.0, 0.0),
+            "torque_range": (-0.0, 0.0),
         },
     )
 
@@ -135,12 +130,12 @@ class EventCfg:
         params={
             "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
             "velocity_range": {
-                "x": (-0.1, 0.1),
-                "y": (-0.1, 0.1),
-                "z": (-0.1, 0.1),
-                "roll": (-0.1, 0.1),
-                "pitch": (-0.1, 0.1),
-                "yaw": (-0.1, 0.1),
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
+                "z": (0.0, 0.0),
+                "roll": (0.0, 0.0),
+                "pitch": (0.0, 0.0),
+                "yaw": (0.0, 0.0),
             },
         },
     )
@@ -162,21 +157,21 @@ class EventCfg:
         params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
     )
 
-    base_com = EventTerm(
-        func=mimic_mdp.randomize_rigid_body_com,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
-        }
-    )
+    # base_com = EventTerm(
+    #     func=mimic_mdp.randomize_rigid_body_com,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+    #         "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
+    #     }
+    # )
 
     add_joint_default_pos = EventTerm(
         func=mimic_mdp.randomize_joint_default_pos,
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-            "pos_distribution_params": (-0.2, 0.2),
+            "pos_distribution_params": (-0.1, 0.1),
             "operation": "add",
         },
     )
@@ -206,12 +201,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale={'.*_hip_pitch_joint': 0.3,
-                                                       '.*_hip_roll_joint': 0.25,
-                                                       '.*_hip_yaw_joint': 0.25,
-                                                       '.*_knee_joint': 0.2,
-                                                       '.*_ankle_pitch_joint': 0.25,
-                                                       '.*_ankle_roll_joint': 0.25,}, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.2, use_default_offset=True
     )
 
 
@@ -230,7 +220,7 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
         last_action = ObsTerm(func=mdp.last_action)
-        # gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 0.8})
+        # gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 1})
 
         def __post_init__(self):
             self.history_length = 5
@@ -251,7 +241,7 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05)
         last_action = ObsTerm(func=mdp.last_action)
-        # gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 0.8})
+        # gait_phase = ObsTerm(func=mdp.gait_phase, params={"period": 1})
         # height_scanner = ObsTerm(func=mdp.height_scan,
         #     params={"sensor_cfg": SceneEntityCfg("height_scanner")},
         #     clip=(-1.0, 5.0),
@@ -321,6 +311,12 @@ class RewardsCfg:
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     )
 
+    joint_deviation_hips = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=0.5,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_pitch_joint"])},
+    )
+
     # -- robot
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
     base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.95})
@@ -363,7 +359,7 @@ class RewardsCfg:
         params={
             "std": 0.15,
             "tanh_mult": 2.0,
-            "target_height": 0.07,
+            "target_height": 0.1,
             "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_roll.*"),
         },
     )
