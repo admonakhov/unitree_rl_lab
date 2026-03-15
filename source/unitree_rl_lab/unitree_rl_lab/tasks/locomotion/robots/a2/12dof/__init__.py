@@ -1,7 +1,7 @@
 import gymnasium as gym
 
 gym.register(
-    id="Unitree-Arcus-A2-uni-Velocity",
+    id="Arcus-A2-uni-Velocity",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -12,7 +12,7 @@ gym.register(
 )
 
 gym.register(
-    id="Unitree-Arcus-A2-mag-Velocity",
+    id="Arcus-A2-mag-Velocity",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
