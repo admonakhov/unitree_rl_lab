@@ -92,24 +92,7 @@
       </geometry>
     </collision>
   </link>
-  <joint
-    name="waist_yaw_joint"
-    type="fixed">
-    <origin
-      xyz="0 0 0"
-      rpy="0 0 0" />
-    <parent
-      link="pelvis" />
-    <child
-      link="torso_link" />
-    <axis
-      xyz="0 0 1" />
-    <limit
-      lower="-1.6"
-      upper="1.6"
-      effort="130"
-      velocity="31" />
-  </joint>
+
   <link
     name="left_hip_pitch_link">
     <inertial>
@@ -873,6 +856,25 @@
       upper="0.26"
       effort="60"
       velocity="18" />
+  </joint>
+
+  <joint
+    name="waist_yaw_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="pelvis" />
+    <child
+      link="torso_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.6"
+      upper="1.6"
+      effort="130"
+      velocity="31" />
   </joint>
 
   <link name="imu_in_pelvis">

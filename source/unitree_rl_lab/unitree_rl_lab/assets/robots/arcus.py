@@ -575,5 +575,83 @@ ARCUS_A2_12DOF_CFG = UnitreeArticulationCfg(
         "right_knee_joint",
         "right_ankle_pitch_joint",
         "right_ankle_roll_joint",
+
+    ],
+)
+
+
+
+
+ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
+    spawn=UnitreeUrdfFileCfg(
+        asset_path="robots/arcus/a2/acrus2_v0_23.urdf",
+    ),
+
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 0.95),
+        joint_pos={
+            ".*_hip_pitch_joint": 0.0,
+            ".*_knee_joint": 0.0,
+            ".*_ankle_pitch_joint": 0.0,
+        },
+        joint_vel={".*": 0.0},
+    ),
+    soft_joint_pos_limit_factor=0.9,
+    actuators={
+        "P90N20": ImplicitActuatorCfg(
+            joint_names_expr=[".*_hip_pitch_.*", ".*_hip_yaw_.*", ".*_hip_roll_.*", ".*_knee_.*"],
+            effort_limit_sim=EFFORT_P90N20,
+            velocity_limit_sim=VELOCITY_P90N20,
+            stiffness={
+                ".*_hip_.*": 100.0,
+                ".*_knee_.*": 150.0,
+            },
+            damping={
+                ".*_hip_.*": 2.0,
+                ".*_knee_.*": 4.0,
+            },
+            armature=ARMATURE,
+        ),
+        "P60N30": ImplicitActuatorCfg(
+            joint_names_expr=[
+                ".*_ankle_.*",
+            ],
+            effort_limit_sim=EFFORT_P60N30,
+            velocity_limit_sim=VELOCITY_P60N30,
+            stiffness=40.0,
+            damping={
+                ".*_ankle_.*": 2.0,
+            },
+            armature=ARMATURE,
+        ),
+    },
+    joint_sdk_names=[
+        "left_hip_pitch_joint",
+        "left_hip_roll_joint",
+        "left_hip_yaw_joint",
+        "left_knee_joint",
+        "left_ankle_pitch_joint",
+        "left_ankle_roll_joint",
+
+        "right_hip_pitch_joint",
+        "right_hip_roll_joint",
+        "right_hip_yaw_joint",
+        "right_knee_joint",
+        "right_ankle_pitch_joint",
+        "right_ankle_roll_joint",
+
+        "waist_yaw_joint",
+
+        "left_shoulder_pitch_joint",
+        "left_shoulder_roll_joint",
+        "left_shoulder_yaw_joint",
+        "left_elbow_joint",
+        "left_wrist_roll_joint",
+
+        "right_shoulder_pitch_joint",
+        "right_shoulder_roll_joint",
+        "right_shoulder_yaw_joint",
+        "right_elbow_joint",
+        "right_wrist_roll_joint",
     ],
 )
