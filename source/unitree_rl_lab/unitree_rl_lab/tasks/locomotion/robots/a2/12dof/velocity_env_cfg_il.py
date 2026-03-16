@@ -210,16 +210,25 @@ class CommandsCfg:
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
         motion_file=[
-                    "mocap/arcus2/arc1.npz",
-                    "mocap/arcus2/arc2.npz",
-                    "mocap/arcus2/rot1.npz",
-                    "mocap/arcus2/rot2.npz",
-                    "mocap/arcus2/walk1.npz",
-                    "mocap/arcus2/walk2.npz",
-                    "mocap/arcus2/stand.npz",
-                    "mocap/arcus2/back.npz",
+                    # "mocap/arcus2/arc1.npz",
+                    # "mocap/arcus2/arc2.npz",
+                    # "mocap/arcus2/rot1.npz",
+                    # "mocap/arcus2/rot2.npz",
+                    # "mocap/arcus2/walk1.npz",
+                    # "mocap/arcus2/walk2.npz",
+                    # "mocap/arcus2/stand.npz",
+                    # "mocap/arcus2/back.npz",
+                    # "mocap/arcus2/walk1.npz",
 
-    
+
+                    "mocap/arcus2_29/arc1.npz",
+                    "mocap/arcus2_29/arc2.npz",
+                    "mocap/arcus2_29/rot1.npz",
+                    "mocap/arcus2_29/rot2.npz",
+                    "mocap/arcus2_29/walk1.npz",
+                    "mocap/arcus2_29/walk2.npz",
+                    "mocap/arcus2_29/stand.npz",
+
                     ],
 
         velocity_smoothing_alpha = 0.97,
@@ -263,12 +272,12 @@ class CommandsCfg:
             "right_hip_roll_link",
             "right_knee_link",
             "right_ankle_roll_link",
-            "left_shoulder_roll_link",
-            "left_elbow_link",
-            "left_wrist_roll_link",
-            "right_shoulder_roll_link",
-            "right_elbow_link",
-            "right_wrist_roll_link",
+            # "left_shoulder_roll_link",
+            # "left_elbow_link",
+            # "left_wrist_roll_link",
+            # "right_shoulder_roll_link",
+            # "right_elbow_link",
+            # "right_wrist_roll_link",
         ],
     )
 

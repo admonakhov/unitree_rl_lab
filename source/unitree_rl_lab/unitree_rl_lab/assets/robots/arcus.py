@@ -584,7 +584,7 @@ ARCUS_A2_12DOF_CFG = UnitreeArticulationCfg(
 
 ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path="robots/arcus/a2/acrus2_v0_23.urdf",
+        asset_path="robots/arcus/a2/acrus2_v0_29.urdf",
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(
@@ -599,16 +599,18 @@ ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
     soft_joint_pos_limit_factor=0.9,
     actuators={
         "P90N20": ImplicitActuatorCfg(
-            joint_names_expr=[".*_hip_pitch_.*", ".*_hip_yaw_.*", ".*_hip_roll_.*", ".*_knee_.*"],
+            joint_names_expr=[".*_hip_pitch_.*", ".*_hip_yaw_.*", ".*_hip_roll_.*", ".*_knee_.*", "waist_.*"],
             effort_limit_sim=EFFORT_P90N20,
             velocity_limit_sim=VELOCITY_P90N20,
             stiffness={
                 ".*_hip_.*": 100.0,
                 ".*_knee_.*": 150.0,
+                "waist_.*": 100.0,
             },
             damping={
                 ".*_hip_.*": 2.0,
                 ".*_knee_.*": 4.0,
+                "waist_.*": 2.0,
             },
             armature=ARMATURE,
         ),
@@ -641,17 +643,23 @@ ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
         "right_ankle_roll_joint",
 
         "waist_yaw_joint",
+        "waist_yaw2_joint",
+        "waist_yaw3_joint",
 
         "left_shoulder_pitch_joint",
         "left_shoulder_roll_joint",
         "left_shoulder_yaw_joint",
         "left_elbow_joint",
         "left_wrist_roll_joint",
+        "left_wrist_roll2_joint",
+        "left_wrist_roll3_joint",
 
         "right_shoulder_pitch_joint",
         "right_shoulder_roll_joint",
         "right_shoulder_yaw_joint",
         "right_elbow_joint",
         "right_wrist_roll_joint",
+        "right_wrist_roll2_joint",
+        "right_wrist_roll3_joint",
     ],
 )
