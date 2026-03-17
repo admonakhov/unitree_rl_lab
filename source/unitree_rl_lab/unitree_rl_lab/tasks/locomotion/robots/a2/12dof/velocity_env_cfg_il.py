@@ -196,9 +196,9 @@ class CommandsCfg:
             heading=(-0, 0),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1, 1.5),
+            lin_vel_x=(-1, 1),
             lin_vel_y=(-0.0, 0.0),
-            ang_vel_z=(-1.1, 1.1),
+            ang_vel_z=(-0.5, 0.5),
             heading=(-3.14, 3.14),
         ),
     )
@@ -210,17 +210,9 @@ class CommandsCfg:
         # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
         # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
         motion_file=[
-                    # "mocap/arcus2/arc1.npz",
-                    # "mocap/arcus2/arc2.npz",
-                    # "mocap/arcus2/rot1.npz",
-                    # "mocap/arcus2/rot2.npz",
-                    # "mocap/arcus2/walk1.npz",
-                    # "mocap/arcus2/walk2.npz",
-                    # "mocap/arcus2/stand.npz",
-                    # "mocap/arcus2/back.npz",
-                    # "mocap/arcus2/walk1.npz",
-
-
+                    "mocap/arcus2_29/fast_forward.npz",
+                    "mocap/arcus2_29/arc1_fast.npz",
+                    "mocap/arcus2_29/arc2_fast.npz",
                     "mocap/arcus2_29/arc1.npz",
                     "mocap/arcus2_29/arc2.npz",
                     "mocap/arcus2_29/rot1.npz",
@@ -228,11 +220,10 @@ class CommandsCfg:
                     "mocap/arcus2_29/walk1.npz",
                     "mocap/arcus2_29/walk2.npz",
                     "mocap/arcus2_29/stand.npz",
-
                     ],
 
         velocity_smoothing_alpha = 0.97,
-        velocity_factor = 1.,
+        velocity_factor = 1.1,
         motion_assignment = 'round_robin', # round_robin or random
         anchor_body_name = "torso_link",
 
@@ -292,31 +283,15 @@ class ActionsCfg:
     JointPositionAction = mdp.JointPositionActionCfg(
         asset_name="robot", joint_names=[".*"], 
         scale={
-        "left_hip_pitch_joint":0.15,
-        "left_hip_roll_joint":0.15,
-        "left_hip_yaw_joint":0.15,
-        "left_knee_joint":0.15,
-        "left_ankle_pitch_joint":0.15,
-        "left_ankle_roll_joint":0.15,
-        "right_hip_pitch_joint":0.15,
-        "right_hip_roll_joint":0.15,
-        "right_hip_yaw_joint":0.15,
-        "right_knee_joint":0.15,
-        "right_ankle_pitch_joint":0.15,
-        "right_ankle_roll_joint":0.15,
+        ".*_hip_.*":0.15,
+        ".*_knee_joint":0.15,
+        ".*_ankle_.*":0.15,
         "waist_yaw_joint":0.25,
-
-        "left_shoulder_pitch_joint":0.0,
-        "left_shoulder_roll_joint":0.0,
-        "left_shoulder_yaw_joint":0.0,
-        "left_elbow_joint":0.0,
-        "left_wrist_roll_joint":0.0,
-
-        "right_shoulder_pitch_joint":0.0,
-        "right_shoulder_roll_joint":0.0,
-        "right_shoulder_yaw_joint":0.0,
-        "right_elbow_joint":0.0,
-        "right_wrist_roll_joint":0.0
+        "waist_yaw2_joint":0.0,
+        "waist_yaw3_joint":0.0,
+        ".*_shoulder_.*":0.0,
+        ".*_elbow_joint":0.0,
+        ".*_wrist_.*":0.0,
         },
         use_default_offset=True
     )

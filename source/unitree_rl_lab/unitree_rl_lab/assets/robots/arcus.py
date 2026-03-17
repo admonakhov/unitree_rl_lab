@@ -605,12 +605,12 @@ ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
             stiffness={
                 ".*_hip_.*": 100.0,
                 ".*_knee_.*": 150.0,
-                "waist_.*": 100.0,
+                "waist_yaw_joint": 100.0,
             },
             damping={
                 ".*_hip_.*": 2.0,
                 ".*_knee_.*": 4.0,
-                "waist_.*": 2.0,
+                "waist_yaw_joint": 2.0,
             },
             armature=ARMATURE,
         ),
