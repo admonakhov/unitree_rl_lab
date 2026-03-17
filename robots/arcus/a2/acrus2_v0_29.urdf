@@ -42,7 +42,7 @@
           rgba="0.75294 0.75294 0.75294 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -50,7 +50,7 @@
         <mesh
           filename="meshes/pelvis.STL" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <link
     name="torso_link">
@@ -416,36 +416,36 @@
 
     
     <collision>
-      <origin xyz="-0.01 0.020 -0.043" rpy="0 0 0"/>
+      <origin xyz="-0.01 0.020 -0.04" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
     </collision>
     <collision>
-      <origin xyz="-0.01 -0.025 -0.043" rpy="0 0 0"/>
+      <origin xyz="-0.01 -0.025 -0.04" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.165 0.04 -0.04" rpy="0 0 0"/>
+      <origin xyz="0.165 0.04 -0.038" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.175 -0.04 -0.04" rpy="0 0 0"/>
+      <origin xyz="0.175 -0.04 -0.038" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
     </collision>
 
-    <collision>
+    <!-- <collision>
       <origin xyz="0.195 -0.0 -0.038" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
-    </collision>
+    </collision> -->
     <!-- <collision>
       <origin
         xyz="0 0 0"
@@ -799,36 +799,36 @@
 
     
     <collision>
-      <origin xyz="-0.01 -0.020 -0.043" rpy="0 0 0"/>
+      <origin xyz="-0.01 -0.020 -0.04" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
     </collision>
     <collision>
-      <origin xyz="-0.01 0.025 -0.043" rpy="0 0 0"/>
+      <origin xyz="-0.01 0.025 -0.04" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.175 0.04 -0.04" rpy="0 0 0"/>
+      <origin xyz="0.175 0.04 -0.038" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
     </collision>
     <collision>
-      <origin xyz="0.165 -0.04 -0.04" rpy="0 0 0"/>
+      <origin xyz="0.165 -0.04 -0.038" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
     </collision>
 
-    <collision>
+    <!-- <collision>
       <origin xyz="0.195 -0.0 -0.038" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.005"/>
       </geometry>
-    </collision>
+    </collision> -->
     <!-- <collision>
       <origin
         xyz="0 0 0"

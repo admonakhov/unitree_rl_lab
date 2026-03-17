@@ -125,9 +125,9 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.2, 1.0),
-            "dynamic_friction_range": (0.2, 1.0),
-            "restitution_range": (0.0, 0.1), # Упругость столкновений
+            "static_friction_range": (0.02, 1.0),
+            "dynamic_friction_range": (0.02, 1.0),
+            "restitution_range": (0.0, 0.0), # Упругость столкновений
             "num_buckets": 64,
         },
     )
@@ -218,7 +218,7 @@ class CommandsCfg:
                     "mocap/arcus2_29/rot1.npz",
                     "mocap/arcus2_29/rot2.npz",
                     "mocap/arcus2_29/walk1.npz",
-                    "mocap/arcus2_29/walk2.npz",
+                    # "mocap/arcus2_29/walk2.npz",
                     "mocap/arcus2_29/stand.npz",
                     ],
 
