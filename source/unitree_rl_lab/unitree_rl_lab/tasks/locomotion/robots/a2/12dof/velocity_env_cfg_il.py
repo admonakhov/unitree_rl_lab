@@ -373,7 +373,9 @@ class RewardsCfg:
         func=mdp.joint_pos_limits,
         weight=-10.0,
         params={"asset_cfg":
-                SceneEntityCfg("robot", joint_names=[r"^(?!left_knee_joint$)(?!right_knee_joint$).+$"])},
+                SceneEntityCfg("robot", 
+                            #    joint_names=[r"^(?!left_knee_joint$)(?!right_knee_joint$).+$"]
+                               )},
     )
 
 
@@ -387,18 +389,18 @@ class RewardsCfg:
     )
 
 
-    joint_deviation_waist = RewTerm(
-        func=mdp.joint_deviation_l1,
-        weight=0.05,
-        params={
-            "asset_cfg": SceneEntityCfg(
-                "robot",
-                joint_names=[
-                    "waist_yaw_joint",
-                ],
-            )
-        },
-    )
+    # joint_deviation_waist = RewTerm(
+    #     func=mdp.joint_deviation_l1,
+    #     weight=0.05,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg(
+    #             "robot",
+    #             joint_names=[
+    #                 "waist_yaw_joint",
+    #             ],
+    #         )
+    #     },
+    # )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1)
     # -- tracking
