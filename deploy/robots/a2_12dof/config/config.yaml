@@ -55,4 +55,4 @@ FSM:
   Velocity:
     transitions: 
       Passive: LT + B.on_pressed
-    policy_dir: ../../../logs/rsl_rl/arcus_a2_il_velocity
+    policy_dir: ../../../logs/rsl_rl/arcus_a2_il_velocity/

@@ -238,7 +238,7 @@ class MotionLoader:
     def _load_motion(self):
         """Loads the motion from the csv file."""
         if self.frame_range is None:
-            motion = torch.from_numpy(np.loadtxt(self.motion_file, delimiter=","))
+            motion = torch.from_numpy(np.loadtxt(self.motion_file, delimiter=","))[:, :30]
         else:
             motion = torch.from_numpy(
                 np.loadtxt(
@@ -395,7 +395,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         # set root state
         root_states = robot.data.default_root_state.clone()
         root_states[:, :3] = motion_base_pos
-        root_states[:, 2] = root_states[:, 2]*0 + 0.90        
+        root_states[:, 2] = root_states[:, 2]*0 + 0.92        
         root_states[:, 3:7] = motion_base_rot
         root_states[:, 7:10] = motion_base_lin_vel
         root_states[:, 10:] = motion_base_ang_vel

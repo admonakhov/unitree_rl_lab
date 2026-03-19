@@ -61,7 +61,7 @@ FSM:
     transitions: 
       Passive: LT + B.on_pressed
       Mimic_Dance_102: LT(2s) + down.on_pressed
-    policy_dir: ../../../logs/rsl_rl/unitree_arcus_a2_v0_velocity
+    policy_dir: ../../../logs/rsl_rl/unitree_arcus_a1_v0_amp_velocity
 
   Mimic_Dance_102:
     transitions: 
