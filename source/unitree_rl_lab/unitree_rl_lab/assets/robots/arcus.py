@@ -584,15 +584,15 @@ ARCUS_A2_12DOF_CFG = UnitreeArticulationCfg(
 
 ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
-        asset_path="robots/arcus/a2/acrus2_v0_29.urdf",
+        asset_path="robots/arcus/a2/acrus2_v1_23.urdf",
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.95),
         joint_pos={
-            ".*_hip_pitch_joint": -0.312,
-            ".*_knee_joint": 0.669,
-            ".*_ankle_pitch_joint": -0.363,
+            ".*_hip_pitch_joint": -0.1,
+            ".*_knee_joint": 0.2,
+            ".*_ankle_pitch_joint": -0.1,
         },
         joint_vel={".*": 0.0},
     ),
@@ -643,23 +643,17 @@ ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
         "right_ankle_roll_joint",
 
         "waist_yaw_joint",
-        "waist_yaw2_joint",
-        "waist_yaw3_joint",
 
         "left_shoulder_pitch_joint",
         "left_shoulder_roll_joint",
         "left_shoulder_yaw_joint",
         "left_elbow_joint",
         "left_wrist_roll_joint",
-        "left_wrist_roll2_joint",
-        "left_wrist_roll3_joint",
 
         "right_shoulder_pitch_joint",
         "right_shoulder_roll_joint",
         "right_shoulder_yaw_joint",
         "right_elbow_joint",
         "right_wrist_roll_joint",
-        "right_wrist_roll2_joint",
-        "right_wrist_roll3_joint",
     ],
 )
