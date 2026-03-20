@@ -163,12 +163,12 @@ class EventCfg:
     )
 
     # interval
-    # push_robot = EventTerm(
-    #     func=mimic_mdp.push_by_setting_velocity,
-    #     mode="interval",
-    #     interval_range_s=(1.0, 3.0),
-    #     params={"velocity_range": VELOCITY_RANGE},
-    # )
+    push_robot = EventTerm(
+        func=mimic_mdp.push_by_setting_velocity,
+        mode="interval",
+        interval_range_s=(1.0, 3.0),
+        params={"velocity_range": VELOCITY_RANGE},
+    )
 
 
 
@@ -221,13 +221,13 @@ class CommandsCfg:
                     ],
 
         velocity_smoothing_alpha = 0.97,
-        velocity_factor = 1.1,
+        velocity_factor = 1.2,
         motion_assignment = 'round_robin', # round_robin or random
         anchor_body_name = "torso_link",
 
         adaptive_alpha = 0.000,
         adaptive_uniform_ratio = 1,
-        threshold_velocity_cmd = 0.16,
+        threshold_velocity_cmd = 0.12,
         resampling_time_range=(50.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
         
@@ -278,11 +278,7 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], 
-        scale=0.15,
-        use_default_offset=True
-    )
+    JointPositionAction = mdp.JointPositionActionCfg(asset_name="robot", joint_names=[".*"], scale=0.15, use_default_offset=True)
 
 
 # -----------------------
@@ -299,7 +295,7 @@ class ObservationsCfg:
         # Velocity command observations
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"}, noise=Unoise(n_min=-0.1, n_max=0.1))
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
         last_action = ObsTerm(func=mdp.last_action)
@@ -369,26 +365,20 @@ class RewardsCfg:
         },
     )
 
-
-    # joint_deviation_waist = RewTerm(
+    # joint_deviation_legs = RewTerm(
     #     func=mdp.joint_deviation_l1,
-    #     weight=0.05,
-    #     params={
-    #         "asset_cfg": SceneEntityCfg(
-    #             "robot",
-    #             joint_names=[
-    #                 "waist_yaw_joint",
-    #             ],
-    #         )
-    #     },
+    #     weight=-1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     # )
+
+
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1)
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,
         weight=0.25,
-        params={"command_name": "motion", "std": 0.3},
+        params={"command_name": "motion", "std": 0.4},
     )
     motion_global_anchor_ori = RewTerm(
         func=mimic_mdp.motion_global_anchor_orientation_error_exp,
@@ -398,7 +388,7 @@ class RewardsCfg:
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
         weight=0.5,
-        params={"command_name": "motion", "std": 0.3},
+        params={"command_name": "motion", "std": 0.4},
     )
     motion_body_ori = RewTerm(
         func=mimic_mdp.motion_relative_body_orientation_error_exp,
@@ -414,6 +404,19 @@ class RewardsCfg:
         func=mimic_mdp.motion_global_body_angular_velocity_error_exp,
         weight=0.5,
         params={"command_name": "motion", "std": 3.14},
+    )
+
+    joint_body_pos = RewTerm(
+        func=mimic_mdp.motion_joint_position_error_exp,
+        weight=0.5,
+        params={"command_name": "motion", "std": 0.3},
+    )
+
+
+    joint_body_vel = RewTerm(
+        func=mimic_mdp.motion_joint_velocity_error_exp,
+        weight=0.5,
+        params={"command_name": "motion", "std": 1},
     )
 
     undesired_contacts = RewTerm(

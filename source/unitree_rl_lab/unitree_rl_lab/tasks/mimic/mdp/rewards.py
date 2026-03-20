@@ -63,6 +63,18 @@ def motion_global_body_linear_velocity_error_exp(
     return torch.exp(-error.mean(-1) / std**2)
 
 
+def motion_joint_position_error_exp(env: ManagerBasedRLEnv, command_name: str, std: float) -> torch.Tensor:
+    command: MotionCommand = env.command_manager.get_term(command_name)
+    error = torch.square(command.joint_pos - command.robot_joint_pos)
+    return torch.exp(-error.mean(-1) / std**2)
+
+
+def motion_joint_velocity_error_exp(env: ManagerBasedRLEnv, command_name: str, std: float) -> torch.Tensor:
+    command: MotionCommand = env.command_manager.get_term(command_name)
+    error = torch.square(command.joint_vel - command.robot_joint_vel)
+    return torch.exp(-error.mean(-1) / std**2)
+
+
 def motion_global_body_angular_velocity_error_exp(
     env: ManagerBasedRLEnv, command_name: str, std: float, body_names: list[str] | None = None
 ) -> torch.Tensor:
