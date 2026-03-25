@@ -8,9 +8,16 @@ FSM:
       id: 3
       type: RLBase
 
-    # Mimic_Dance_102: # uncomment to enable
-    #   id: 101
-    #   type: Mimic
+    Mimic_Action_1: # uncomment to enable
+      id: 101
+      type: Mimic
+    Mimic_Action_2:
+      id: 102
+      type: Mimic
+    Mimic_Action_3:
+      id: 103
+      type: Mimic
+
 
   Passive:
     transitions: 
@@ -60,16 +67,37 @@ FSM:
   Velocity:
     transitions: 
       Passive: LT + B.on_pressed
-      Mimic_Dance_102: LT(2s) + down.on_pressed
+      Mimic_Action_1: LT(2s) + down.on_pressed
+      Mimic_Action_2: LT(2s) + left.on_pressed
+      Mimic_Action_3: LT(2s) + right.on_pressed
     policy_dir: ../../../logs/rsl_rl/unitree_arcus_a1_v0_amp_velocity
 
-  Mimic_Dance_102:
+  Mimic_Action_1:
     transitions: 
       Passive: LT + B.on_pressed
       Velocity: RB + X.on_pressed
-    fps: 30
-    motion_file: ../../../mocap/arcus/actors/arcus_a1.csv
+    fps: 60
+    motion_file: ../../../mocap/arcus/actors/211.csv
     policy_dir: ../../../logs/rsl_rl/arcus_a1_v0_mimic
-    
     time_start: 0
-    time_end: 20.0
+    time_end: 24.0
+
+  Mimic_Action_2:
+    transitions: 
+      Passive: LT + B.on_pressed
+      Velocity: RB + X.on_pressed
+    fps: 60
+    motion_file: ../../../mocap/arcus/actors/22.csv
+    policy_dir: ../../../logs/rsl_rl/arcus_a1_v0_mimic
+    time_start: 0
+    time_end: 24.0
+
+  Mimic_Action_3:
+    transitions: 
+      Passive: LT + B.on_pressed
+      Velocity: RB + X.on_pressed
+    fps: 60
+    motion_file: ../../../mocap/arcus/actors/214.csv
+    policy_dir: ../../../logs/rsl_rl/arcus_a1_v0_mimic
+    time_start: 0
+    time_end: 24.0

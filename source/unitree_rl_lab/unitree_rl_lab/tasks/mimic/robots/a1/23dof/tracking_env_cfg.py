@@ -88,7 +88,21 @@ class CommandsCfg:
         asset_name="robot",
         # generate npz file before training
         # python python scripts/mimic/csv_to_npz.py -f path/to/G1_Take_102.bvh_60hz.csv --input_fps 60
-        motion_file= "mocap/arcus/actors/arcus_a1.npz",
+        motion_file= ['mocap/arcus/actors/22.npz',
+                      'mocap/arcus/actors/211.npz',
+                      'mocap/arcus/actors/212.npz',
+                      'mocap/arcus/actors/213.npz',
+                      'mocap/arcus/actors/214.npz',
+                      'mocap/arcus/actors/311.npz',
+                      'mocap/arcus/actors/312.npz',
+                      'mocap/arcus/actors/313.npz',
+                      'mocap/arcus/actors/314.npz',
+                      'mocap/arcus/actors/315.npz',
+                      ],
+
+        adaptive_alpha = 0.000,
+        adaptive_uniform_ratio = 1,
+
         anchor_body_name="torso_link",
         resampling_time_range=(1.0e9, 1.0e9),
         debug_vis=True,
@@ -126,7 +140,7 @@ class ActionsCfg:
     """Action specifications for the MDP."""
 
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.2, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.3, use_default_offset=True
     )
 
 
@@ -187,15 +201,15 @@ class EventCfg:
         },
     )
 
-    add_joint_default_pos = EventTerm(
-        func=mdp.randomize_joint_default_pos,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-            "pos_distribution_params": (-0.01, 0.01),
-            "operation": "add",
-        },
-    )
+    # add_joint_default_pos = EventTerm(
+    #     func=mdp.randomize_joint_default_pos,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+    #         "pos_distribution_params": (-0.01, 0.01),
+    #         "operation": "add",
+    #     },
+    # )
 
     base_com = EventTerm(
         func=mdp.randomize_rigid_body_com,

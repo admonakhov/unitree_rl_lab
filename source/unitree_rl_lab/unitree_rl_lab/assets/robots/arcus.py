@@ -508,7 +508,7 @@ VELOCITY_P90N20 = 20
 
 ARMATURE_P60N30 = 1.67e-5
 ARMATURE_P90N20 = 7.16e-5
-ARMATURE = 0.02
+ARMATURE = 0.04
 
 STIFFNESS_P60N30 = ARMATURE_P60N30 * NATURAL_FREQ**2  
 STIFFNESS_P90N20 = ARMATURE_P90N20 * NATURAL_FREQ**2 
@@ -590,9 +590,9 @@ ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.95),
         joint_pos={
-            ".*_hip_pitch_joint": -0.2,
-            ".*_knee_joint": 0.4,
-            ".*_ankle_pitch_joint": -0.5,
+            ".*_hip_pitch_joint": -0.3,
+            ".*_knee_joint": 0.45,
+            ".*_ankle_pitch_joint": -0.15,
         },
         joint_vel={".*": 0.0},
     ),
@@ -608,9 +608,9 @@ ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
                 "waist_yaw_joint": 100.0,
             },
             damping={
-                ".*_hip_.*": 4.0,
-                ".*_knee_.*": 6.0,
-                "waist_yaw_joint": 4.0,
+                ".*_hip_.*": 2.0,
+                ".*_knee_.*": 4.0,
+                "waist_yaw_joint": 2.0,
             },
             armature=ARMATURE,
         ),
@@ -622,7 +622,7 @@ ARCUS_A2_RET_CFG = UnitreeArticulationCfg(
             velocity_limit_sim=VELOCITY_P60N30,
             stiffness=40.0,
             damping={
-                ".*_ankle_.*": 4.0,
+                ".*_ankle_.*": 2.0,
             },
             armature=ARMATURE,
         ),

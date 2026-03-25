@@ -127,7 +127,7 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
             "static_friction_range": (0.1, 1.0),
             "dynamic_friction_range": (0.1, 1.0),
-            "restitution_range": (0.0, 0.0), # Упругость столкновений
+            "restitution_range": (0.0, 0.1),
             "num_buckets": 64,
         },
     )
@@ -158,7 +158,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "com_range": {"x": (-0.075, 0.075), "y": (-0.1, 0.1), "z": (-0.1, 0.05)},
+            "com_range": {"x": (-0.1, 0.1), "y": (-0.1, 0.1), "z": (-0.1, 0.1)},
         },
     )
 
@@ -184,10 +184,10 @@ class CommandsCfg:
         asset_name="robot",
         # allow more frequent resampling to improve responsiveness when turning
         resampling_time_range=(5.0, 30.0),
-        rel_standing_envs=0.2,
-        rel_heading_envs=0.2,
+        rel_standing_envs=0.0,
+        rel_heading_envs=0.0,
         # enable heading command so policy receives/uses target heading
-        heading_command=True,
+        heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0., 0),
@@ -203,53 +203,45 @@ class CommandsCfg:
         ),
     )
 
-    # Motion command from mocap data for AMP-style regularization
+    # Motion command from mocap data for IL-style regularization
     motion = MotionCommandCfg(
         asset_name="robot",
-        # Path to motion file (convert CSV to NPZ before training)
-        # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
-        # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
         motion_file=[
+                    "mocap/arcus2/walk2.npz",
                     "mocap/arcus2/medium_forward.npz",
-                    # "mocap/arcus2/arc1_fast.npz",
-                    # "mocap/arcus2/arc2_fast.npz",
-                    # "mocap/arcus2/arc1.npz",
-                    # "mocap/arcus2/arc2.npz",
-                    # "mocap/arcus2/walk1.npz",
+                    "mocap/arcus2/arc1_fast.npz",
+                    "mocap/arcus2/arc2_fast.npz",
+                    "mocap/arcus2/arc1.npz",
+                    "mocap/arcus2/arc2.npz",
                     "mocap/arcus2/walk2.npz",
                     "mocap/arcus2/stand.npz",
                     ],
 
-        velocity_smoothing_alpha = 0.97,
-        velocity_factor = 1.2,
+        velocity_smoothing_alpha = 0.95,
+        velocity_factor = 1.1,
         motion_assignment = 'round_robin', # round_robin or random
         anchor_body_name = "torso_link",
 
         adaptive_alpha = 0.000,
         adaptive_uniform_ratio = 1,
-        threshold_velocity_cmd = 0.12,
-        resampling_time_range=(50.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
+        threshold_velocity_cmd = 0.1,
+        resampling_time_range=(50.0, 1000.0), 
         debug_vis=True,
         
         pose_range={
-            "x": (-0.03, 0.03),
-            "y": (-0.03, 0.03),
-            "z": (0.0, 0.0),
-            "roll": (-0.05, 0.05),
-            "pitch": (-0.05, 0.05),
-            "yaw": (-0.0, 0.0),  # Increased from (-0.1, 0.1) for more directional variety
+            "x": (-0.05, 0.05),
+            "y": (-0.05, 0.05),
+            "z": (-0.01, 0.01),
+            "roll": (-0.1, 0.1),
+            "pitch": (-0.1, 0.1),
+            "yaw": (-0.2, 0.2),
         },
-        velocity_range={
-            "x": (-0.3, 0.3),
-            "y": (-0.3, 0.3),
-            "z": (-0.1, 0.1),
-            "roll": (-0.26, 0.26),
-            "pitch": (-0.26, 0.26),
-            "yaw": (-1.0, 1.0),  # Increased from (-0.39, 0.39) for rotational variety
-        },
-        joint_position_range=(-0.02, 0.02),  # Further reduced for better arm tracking
-        velocity_command_name="base_velocity",  # Link motion direction to velocity command for directional consistency
-        set_velocity_command=True,  # Set the velocity command to match the current mocap velocity
+        
+        velocity_range=VELOCITY_RANGE,
+
+        joint_position_range=(-0.1, 0.1),
+        velocity_command_name="base_velocity",
+        set_velocity_command=True,
         
         # Bodies to track
         body_names=[
@@ -294,9 +286,9 @@ class ObservationsCfg:
 
         # Velocity command observations
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
-        projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
+        projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.1, n_max=0.1))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"}, noise=Unoise(n_min=-0.1, n_max=0.1))
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.025, n_max=0.025))
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
         last_action = ObsTerm(func=mdp.last_action)
 
@@ -336,13 +328,13 @@ class ObservationsCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    # -- Velocity tracking task rewards (adjusted since motion tracking is now stronger)
+    # -- Velocity tracking task rewards
     track_lin_vel_xy = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_exp,
         weight=1,
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
-    # stronger angular velocity tracking to improve turning behavior
+
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp,
         weight=1, 
@@ -365,13 +357,11 @@ class RewardsCfg:
         },
     )
 
-    # joint_deviation_legs = RewTerm(
-    #     func=mdp.joint_deviation_l1,
-    #     weight=-1.0,
-    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
-    # )
-
-
+    joint_deviation_legs = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
+    )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1)
     # -- tracking
@@ -402,20 +392,20 @@ class RewardsCfg:
     )
     motion_body_ang_vel = RewTerm(
         func=mimic_mdp.motion_global_body_angular_velocity_error_exp,
-        weight=0.5,
+        weight=1,
         params={"command_name": "motion", "std": 3.14},
     )
 
     joint_body_pos = RewTerm(
         func=mimic_mdp.motion_joint_position_error_exp,
-        weight=0.5,
+        weight=1,
         params={"command_name": "motion", "std": 0.3},
     )
 
 
     joint_body_vel = RewTerm(
         func=mimic_mdp.motion_joint_velocity_error_exp,
-        weight=0.5,
+        weight=1,
         params={"command_name": "motion", "std": 1},
     )
 
@@ -434,9 +424,6 @@ class RewardsCfg:
     )
 
 
-# -----------------------
-# Terminations
-# -----------------------
 @configclass
 class TerminationsCfg:
     """Termination terms for the MDP."""
@@ -445,22 +432,7 @@ class TerminationsCfg:
     base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.4})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.4})
 
-# -----------------------
-# Curriculum
-# -----------------------
-# @configclass
-# class CurriculumCfg:
-#     """Curriculum terms for the MDP."""
 
-#     # Disabled terrain curriculum since using only flat terrain
-#     # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
-#     # lin_vel_cmd_levels = CurrTerm(func=mdp.lin_vel_cmd_levels)
-#     pass
-
-
-# -----------------------
-# Полная конфигурация среды
-# -----------------------
 @configclass
 class RobotEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the locomotion velocity-tracking environment with AMP."""
