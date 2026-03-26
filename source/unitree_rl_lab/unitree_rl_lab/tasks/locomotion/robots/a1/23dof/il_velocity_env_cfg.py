@@ -405,6 +405,21 @@ class RewardsCfg:
         params={"command_name": "motion", "std": 3.14},
     )
 
+
+    joint_body_pos = RewTerm(
+        func=mimic_mdp.motion_joint_position_error_exp,
+        weight=1,
+        params={"command_name": "motion", "std": 0.3},
+    )
+
+
+    joint_body_vel = RewTerm(
+        func=mimic_mdp.motion_joint_velocity_error_exp,
+        weight=1,
+        params={"command_name": "motion", "std": 1},
+    )
+
+
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-0.1,
@@ -430,18 +445,6 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.4})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.4})
-
-# -----------------------
-# Curriculum
-# -----------------------
-# @configclass
-# class CurriculumCfg:
-#     """Curriculum terms for the MDP."""
-
-#     # Disabled terrain curriculum since using only flat terrain
-#     # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
-#     # lin_vel_cmd_levels = CurrTerm(func=mdp.lin_vel_cmd_levels)
-#     pass
 
 
 # -----------------------
