@@ -1,6 +1,6 @@
-# unitree_23dof_amp_velocity_env_cfg.py
+# arcus_23dof_il_velocity_env_cfg.py
 """
-Configuration for Unitree-Arcus-A1 locomotion environment with AMP (Adversarial Motion Priors).
+Configuration for Unitree-Arcus-A1 locomotion environment with IL (Adversarial Motion Priors).
 Combines velocity commands for locomotion with motion tracking from mocap data to ensure natural motion.
 """
 import math
@@ -23,7 +23,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_MIMIC_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_RETARGETING_CFG as ROBOT_CFG
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.mimic import mdp as mimic_mdp
 from unitree_rl_lab.tasks.mimic.mdp.commands import MotionCommandCfg
@@ -203,59 +203,25 @@ class CommandsCfg:
         ),
     )
 
-    # Motion command from mocap data for AMP-style regularization
+    # Motion command from mocap data for IL-style regularization
     motion = MotionCommandCfg(
         asset_name="robot",
-        # Path to motion file (convert CSV to NPZ before training)
-        # CSV file location: /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv
-        # To convert, run: python scripts/mimic/csv_to_npz_arcus.py -f /home/ant/UniTree/gym/retargeting/mocap/walking_60fps.csv --input_fps 60 --output_name /home/ant/UniTree/gym/unitree_rl_lab/poses/a1_23dof/walking_60fps.npz
         motion_file=[
-                    # "mocap/arcus/irina/start_n_stop.npz", 
-                    # "mocap/arcus/irina/forward.npz", 
-                    # "mocap/arcus/irina/back.npz", 
-                    # "mocap/arcus/irina/left_rot.npz",
-                    # "mocap/arcus/irina/right_rot.npz", 
-                    # "mocap/arcus/andrey/slow_forward.npz",
-                    "mocap/arcus/andrey/medium_forward_faster.npz",
-                    # "mocap/arcus/andrey/medium_forward_fastest.npz",
-                    # "mocap/arcus/andrey/medium_forward_normal.npz",
-                    # "mocap/arcus/andrey/fast_forward.npz",
-                    # "mocap/arcus/andrey/forward_2.npz",  
-                    # "mocap/arcus/andrey/back.npz",
-                    "mocap/arcus/andrey/arc1.npz",
-                    "mocap/arcus/andrey/arc2.npz",    
-                    "mocap/arcus/monakhov/stand.npz", 
-                    # "mocap/arcus/monakhov/rot1.npz", 
-                    # "mocap/arcus/monakhov/rot2.npz", 
-                    "mocap/arcus/andrey/slow/arc1_35fps.npz",
-                    "mocap/arcus/andrey/slow/arc2_35fps.npz",
-                    "mocap/arcus/andrey/slow/back_35fps.npz",
-                    "mocap/arcus/andrey/slow/rot1_35fps.npz",
-                    "mocap/arcus/andrey/slow/rot2_35fps.npz",
-                    "mocap/arcus/andrey/slow/walk2_35fps.npz",
-                    # "mocap/arcus/andrey/slow/side1_35fps.npz",
-                    # "mocap/arcus/andrey/slow/side2_35fps.npz",
-                    "mocap/arcus/monakhov/stand.npz", 
-                    # "mocap/arcus/andrey/slow/arc1_30fps.npz",
-                    # "mocap/arcus/andrey/slow/arc2_30fps.npz",
-                    # "mocap/arcus/andrey/slow/back_30fps.npz",
-                    # "mocap/arcus/andrey/slow/rot1_30fps.npz",
-                    # "mocap/arcus/andrey/slow/rot2_30fps.npz",
-                    # "mocap/arcus/andrey/slow/walk2_30fps.npz",
-                    # "mocap/arcus/andrey/slow/side1_30fps.npz",
-                    # "mocap/arcus/andrey/slow/side2_30fps.npz",
-                    # "mocap/arcus/andrey/slow/arc1_40fps.npz",
-                    # "mocap/arcus/andrey/slow/arc2_40fps.npz",
-                    # "mocap/arcus/andrey/slow/back_40fps.npz",
-                    # "mocap/arcus/andrey/slow/rot1_40fps.npz",
-                    # "mocap/arcus/andrey/slow/rot2_40fps.npz",
-                    # "mocap/arcus/andrey/slow/walk2_40fps.npz",
-                    # "mocap/arcus/andrey/slow/side1_40fps.npz",
-                    # "mocap/arcus/andrey/slow/side2_40fps.npz",
+                    "mocap/arcus/walking/arc1_30fps.npz",
+                    "mocap/arcus/walking/arc2_30fps.npz",
+                    "mocap/arcus/walking/side1_30fps.npz",
+                    "mocap/arcus/walking/side2_30fps.npz",
+                    "mocap/arcus/walking/rot1_30fps.npz",
+                    "mocap/arcus/walking/rot2_30fps.npz",
+                    "mocap/arcus/walking/walk1_30fps.npz",
+                    "mocap/arcus/walking/back_30fps.npz",
+                    "mocap/arcus/walking/stand_30fps.npz",
+                    "mocap/arcus/walking/forward_fast_30fps.npz",
+
                     ],
 
-        velocity_smoothing_alpha = 0.98,
-        velocity_factor = 1.4,
+        velocity_smoothing_alpha = 0.97,
+        velocity_factor = 1,
         motion_assignment = 'round_robin', # round_robin or random
         anchor_body_name = "torso_link",
 
@@ -331,7 +297,7 @@ class ObservationsCfg:
         # Velocity command observations
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"}, noise=Unoise(n_min=-0.15, n_max=0.15))
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.5, n_max=0.5))
         last_action = ObsTerm(func=mdp.last_action)
@@ -483,7 +449,7 @@ class TerminationsCfg:
 # -----------------------
 @configclass
 class RobotEnvCfg(ManagerBasedRLEnvCfg):
-    """Configuration for the locomotion velocity-tracking environment with AMP."""
+    """Configuration for the locomotion velocity-tracking environment with IL."""
 
     # Scene settings
     scene: RobotSceneCfg = RobotSceneCfg(num_envs=4096, env_spacing=2.5)
