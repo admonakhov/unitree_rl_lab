@@ -70,19 +70,9 @@ FSM:
       Mimic_Action_1: LT(2s) + down.on_pressed
       Mimic_Action_2: LT(2s) + left.on_pressed
       Mimic_Action_3: LT(2s) + right.on_pressed
-    policy_dir: ../../../logs/rsl_rl/unitree_arcus_a1_v0_amp_velocity
+    policy_dir: ../../../logs/rsl_rl/arcus_a1_v0_il_velocity
 
   Mimic_Action_1:
-    transitions: 
-      Passive: LT + B.on_pressed
-      Velocity: RB + X.on_pressed
-    fps: 60
-    motion_file: ../../../mocap/arcus/actors/211.csv
-    policy_dir: ../../../logs/rsl_rl/arcus_a1_v0_mimic
-    time_start: 0
-    time_end: 24.0
-
-  Mimic_Action_2:
     transitions: 
       Passive: LT + B.on_pressed
       Velocity: RB + X.on_pressed
@@ -92,12 +82,22 @@ FSM:
     time_start: 0
     time_end: 24.0
 
+  Mimic_Action_2:
+    transitions: 
+      Passive: LT + B.on_pressed
+      Velocity: RB + X.on_pressed
+    fps: 60
+    motion_file: ../../../mocap/arcus/actors/1311.csv
+    policy_dir: ../../../logs/rsl_rl/arcus_a1_v0_mimic
+    time_start: 0
+    time_end: 24.0
+
   Mimic_Action_3:
     transitions: 
       Passive: LT + B.on_pressed
       Velocity: RB + X.on_pressed
     fps: 60
-    motion_file: ../../../mocap/arcus/actors/214.csv
+    motion_file: ../../../mocap/arcus/actors/1011.csv
     policy_dir: ../../../logs/rsl_rl/arcus_a1_v0_mimic
     time_start: 0
     time_end: 24.0

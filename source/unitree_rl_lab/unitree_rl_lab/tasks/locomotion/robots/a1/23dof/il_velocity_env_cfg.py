@@ -143,15 +143,15 @@ class EventCfg:
         },
     )
 
-    add_joint_default_pos = EventTerm(
-        func=mimic_mdp.randomize_joint_default_pos,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-            "pos_distribution_params": (-0.1, 0.1),
-            "operation": "add",
-        },
-    )
+    # add_joint_default_pos = EventTerm(
+    #     func=mimic_mdp.randomize_joint_default_pos,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+    #         "pos_distribution_params": (-0.1, 0.1),
+    #         "operation": "add",
+    #     },
+    # )
 
     base_com = EventTerm(
         func=mimic_mdp.randomize_rigid_body_com,
@@ -183,11 +183,11 @@ class CommandsCfg:
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
         # allow more frequent resampling to improve responsiveness when turning
-        resampling_time_range=(5.0, 30.0),
-        rel_standing_envs=0.2,
-        rel_heading_envs=0.2,
+        resampling_time_range=(0.0, 0.0),
+        rel_standing_envs=0.0,
+        rel_heading_envs=0.0,
         # enable heading command so policy receives/uses target heading
-        heading_command=True,
+        heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
             lin_vel_x=(-0., 0),
@@ -196,7 +196,7 @@ class CommandsCfg:
             heading=(-0, 0),
         ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1, 1.5),
+            lin_vel_x=(-0.6, 1.),
             lin_vel_y=(-0.0, 0.0),
             ang_vel_z=(-1.1, 1.1),
             heading=(-3.14, 3.14),
@@ -207,17 +207,20 @@ class CommandsCfg:
     motion = MotionCommandCfg(
         asset_name="robot",
         motion_file=[
-                    "mocap/arcus/walking/arc1_30fps.npz",
-                    "mocap/arcus/walking/arc2_30fps.npz",
-                    "mocap/arcus/walking/side1_30fps.npz",
-                    "mocap/arcus/walking/side2_30fps.npz",
-                    "mocap/arcus/walking/rot1_30fps.npz",
-                    "mocap/arcus/walking/rot2_30fps.npz",
-                    "mocap/arcus/walking/walk1_30fps.npz",
-                    "mocap/arcus/walking/back_30fps.npz",
-                    "mocap/arcus/walking/stand_30fps.npz",
-                    "mocap/arcus/walking/forward_fast_30fps.npz",
+                    "mocap/arcus/walking/rot1_n.npz",
+                    "mocap/arcus/walking/rot2_n.npz",
+                    "mocap/arcus/walking/back.npz",
+                    "mocap/arcus/walking/stand.npz",
 
+                    "mocap/arcus/walking/arc1.npz",
+                    "mocap/arcus/walking/arc1_f.npz",
+                    "mocap/arcus/walking/walk2.npz",
+                    "mocap/arcus/walking/walk2_f.npz",
+
+                    "mocap/arcus/walking/arc1_fast.npz",
+                    "mocap/arcus/walking/arc1_fast_f.npz",
+                    "mocap/arcus/walking/medium_forward_f.npz",
+                    "mocap/arcus/walking/medium_forward.npz",
                     ],
 
         velocity_smoothing_alpha = 0.97,
@@ -228,7 +231,7 @@ class CommandsCfg:
         adaptive_alpha = 0.000,
         adaptive_uniform_ratio = 1,
         threshold_velocity_cmd = 0.0,
-        resampling_time_range=(50.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
+        resampling_time_range=(100.0, 1000.0),  # Enable resampling to allow motion changes with velocity commands
         debug_vis=True,
         
         pose_range={
@@ -247,7 +250,7 @@ class CommandsCfg:
             "pitch": (-0.26, 0.26),
             "yaw": (-1.0, 1.0),  # Increased from (-0.39, 0.39) for rotational variety
         },
-        joint_position_range=(-0.02, 0.02),  # Further reduced for better arm tracking
+        joint_position_range=(-0.1, 0.1),  # Further reduced for better arm tracking
         velocity_command_name="base_velocity",  # Link motion direction to velocity command for directional consistency
         set_velocity_command=True,  # Set the velocity command to match the current mocap velocity
         
@@ -295,11 +298,11 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         # Velocity command observations
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"}, noise=Unoise(n_min=-0.15, n_max=0.15))
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.5, n_max=0.5))
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05,  noise=Unoise(n_min=-1.5, n_max=1.5))
         last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
@@ -347,7 +350,7 @@ class RewardsCfg:
     # stronger angular velocity tracking to improve turning behavior
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp,
-        weight=1, 
+        weight=0.5, 
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
 
@@ -373,6 +376,12 @@ class RewardsCfg:
     )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1)
+
+    joint_deviation_legs = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
+    )
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,

@@ -36,8 +36,8 @@ from isaaclab.sim import SimulationContext
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
-# from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_CFG as ROBOT_CFG
-from unitree_rl_lab.assets.robots.arcus import ARCUS_A2_RET_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.arcus import ARCUS_A1_23DOF_RETARGETING_CFG as ROBOT_CFG
+# from unitree_rl_lab.assets.robots.arcus import ARCUS_A2_RET_CFG as ROBOT_CFG
 
 # from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG  # Currently only support G1-29dof
 from unitree_rl_lab.tasks.mimic.mdp import MotionLoader

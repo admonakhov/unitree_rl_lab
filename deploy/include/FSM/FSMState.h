@@ -1,9 +1,12 @@
 #pragma once
 
+#include <mutex>
+
 #include "Types.h"
 #include "param.h"
 #include "FSM/BaseState.h"
 #include "isaaclab/devices/keyboard/keyboard.h"
+#include "isaaclab/devices/gamepad/gamepad.h"
 #include "unitree_joystick_dsl.hpp"
 
 class FSMState : public BaseState
@@ -56,6 +59,13 @@ public:
     void pre_run()
     {
         lowstate->update();
+        if (gamepad) {
+            gamepad->update();
+            if (gamepad->connected()) {
+                std::lock_guard<std::mutex> lock(lowstate->mutex_);
+                gamepad->apply_to(lowstate->joystick);
+            }
+        }
         if(keyboard) keyboard->update();
     }
 
@@ -67,4 +77,5 @@ public:
     static std::unique_ptr<LowCmd_t> lowcmd;
     static std::shared_ptr<LowState_t> lowstate;
     static std::shared_ptr<Keyboard> keyboard;
+    static std::shared_ptr<isaaclab::Gamepad> gamepad;
 };

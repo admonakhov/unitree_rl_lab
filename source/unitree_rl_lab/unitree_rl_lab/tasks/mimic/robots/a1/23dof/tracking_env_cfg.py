@@ -88,16 +88,8 @@ class CommandsCfg:
         asset_name="robot",
         # generate npz file before training
         # python python scripts/mimic/csv_to_npz.py -f path/to/G1_Take_102.bvh_60hz.csv --input_fps 60
-        motion_file= ['mocap/arcus/actors/22.npz',
-                      'mocap/arcus/actors/211.npz',
-                      'mocap/arcus/actors/212.npz',
-                      'mocap/arcus/actors/213.npz',
-                      'mocap/arcus/actors/214.npz',
-                      'mocap/arcus/actors/311.npz',
-                      'mocap/arcus/actors/312.npz',
-                      'mocap/arcus/actors/313.npz',
-                      'mocap/arcus/actors/314.npz',
-                      'mocap/arcus/actors/315.npz',
+        motion_file= ['/home/ant/UniTree/gym/retargeting/mocap/arcus/actors/24_03/212.npz'
+                      
                       ],
 
         adaptive_alpha = 0.000,

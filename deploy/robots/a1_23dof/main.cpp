@@ -7,6 +7,7 @@
 std::unique_ptr<LowCmd_t> FSMState::lowcmd = nullptr;
 std::shared_ptr<LowState_t> FSMState::lowstate = nullptr;
 std::shared_ptr<Keyboard> FSMState::keyboard = nullptr;
+std::shared_ptr<isaaclab::Gamepad> FSMState::gamepad = nullptr;
 
 void init_fsm_state()
 {
@@ -23,6 +24,7 @@ void init_fsm_state()
     spdlog::info("Waiting for connection to robot...");
     FSMState::lowstate->wait_for_connection();
     spdlog::info("Connected to robot.");
+    FSMState::gamepad = std::make_shared<isaaclab::Gamepad>();
 }
 
 int main(int argc, char** argv)
@@ -58,4 +60,3 @@ int main(int argc, char** argv)
     
     return 0;
 }
-
