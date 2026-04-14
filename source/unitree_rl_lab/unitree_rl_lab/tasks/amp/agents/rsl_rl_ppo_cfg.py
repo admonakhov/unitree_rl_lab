@@ -89,7 +89,7 @@ class BaseAMPAgentCfg(RslRlOnPolicyRunnerCfg):
 
     # amp parameter
     amp_reward_coef = 0.3
-    amp_motion_files = ["/home/ant/UniTree/gym/retargeting/mocap/arcus_2/walking/ret13dof/walk2.txt"]
+    amp_motion_files = ["mocap/arcus2/discriminator/walk2.txt"]
     amp_num_preload_transitions = 200000
     amp_task_reward_lerp = 0.7
     amp_discr_hidden_dims = [1024, 512, 256]
