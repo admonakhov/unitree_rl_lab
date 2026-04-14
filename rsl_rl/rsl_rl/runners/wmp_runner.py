@@ -1,0 +1,691 @@
+# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+# contributors may be used to endorse or promote products derived from
+# this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# Copyright (c) 2021 ETH Zurich, Nikita Rudin
+
+# This file may have been modified by Bytedance Ltd. and/or its affiliates (“Bytedance's Modifications”).
+# All Bytedance's Modifications are Copyright (year) Bytedance Ltd. and/or its affiliates.
+
+import time
+import os
+from collections import deque
+import statistics
+
+import numpy as np
+from torch.utils.tensorboard import SummaryWriter
+import torch
+import rsl_rl
+from rsl_rl.algorithms import WMAMPPPO, PPO
+from rsl_rl.modules import ActorCritic, ActorCriticWMP, ActorCriticRecurrent
+from rsl_rl.env import VecEnv
+from rsl_rl.modules import Discriminator as AMPDiscriminator
+from rsl_rl.utils import AMPLoader, Normalizer, store_code_state
+from rsl_rl.utils.utils import Normalizer
+from rsl_rl.modules import DepthPredictor
+import torch.optim as optim
+
+from ..dreamer.models import *
+import ruamel.yaml as yaml
+import argparse
+import pathlib
+import sys
+import collections
+from ..dreamer import tools
+import datetime
+import uuid
+class WMPRunner:
+
+    def __init__(self, env:VecEnv, train_cfg: dict, log_dir: str | None = None, device="cpu" ,history_length: int = 5,):
+
+        self.cfg = train_cfg
+        self.alg_cfg = train_cfg["algorithm"]
+        self.policy_cfg = train_cfg["policy"]
+        self.depth_predictor_cfg = train_cfg["depth_predictor"]
+        self.device = device
+        self.env = env
+        self.history_length = history_length
+
+        # check if multi-gpu is enabled
+        self._configure_multi_gpu()
+        # resolve training type depending on the algorithm
+        if self.alg_cfg["class_name"] in ["PPO", "WMAMPPPO"]:
+            self.training_type = "rl"
+        elif self.alg_cfg["class_name"] == "Distillation":
+            self.training_type = "distillation"
+        else:
+            raise ValueError(f"Training type not found for algorithm {self.alg_cfg['class_name']}.")
+        obs, extras = self.env.get_observations()
+        self.num_policy_dim = obs.shape[1] # 78 for T1
+        # resolve type of privileged observations
+        if self.training_type == "rl":
+            if "critic" in extras["observations"]:
+                self.privileged_obs_type = "critic"  # actor-critic reinforcement learnig, e.g., PPO
+            else:
+                self.privileged_obs_type = None
+        if self.training_type == "distillation":
+            if "teacher" in extras["observations"]:
+                self.privileged_obs_type = "teacher"  # policy distillation
+            else:
+                self.privileged_obs_type = None
+
+
+        if self.privileged_obs_type is not None:
+            num_critic_obs = extras["observations"][self.privileged_obs_type].shape[1] # 388
+        else:
+            num_critic_obs = 78
+
+
+
+        # build world model
+        self._build_world_model()
+
+        # build depth predictor
+        self.depth_predictor = DepthPredictor().to(self._world_model.device)
+        self.depth_predictor_opt = optim.Adam(self.depth_predictor.parameters(), lr=self.depth_predictor_cfg["lr"],
+                                              weight_decay=self.depth_predictor_cfg["weight_decay"])
+
+        self.history_dim = history_length * (self.num_policy_dim - 3 ) # exclude command is 75
+        actor_critic = ActorCriticWMP(num_actor_obs=self.num_policy_dim, # not used
+                                          num_critic_obs=num_critic_obs,
+                                          num_actions=self.env.num_actions,
+                                          height_dim=self.cfg["height_dim"],
+                                          privileged_dim=self.cfg["privileged_dim"],
+                                          history_dim=self.history_dim,
+                                          wm_feature_dim=self.wm_feature_dim,
+                                          **self.policy_cfg).to(self.device)
+
+        amp_data = AMPLoader(
+            device,
+            time_between_frames=self.env.env.env.step_dt,
+            preload_transitions=True,
+            num_preload_transitions=train_cfg["amp_num_preload_transitions"],
+            motion_files=train_cfg["amp_motion_files"],
+        )
+        
+        amp_normalizer = Normalizer(amp_data.observation_dim)
+        discriminator = AMPDiscriminator(
+            amp_data.observation_dim * 2,
+            train_cfg['amp_reward_coef'],
+            train_cfg['amp_discr_hidden_dims'], device,
+            train_cfg['amp_task_reward_lerp']).to(self.device)
+
+        # self.discr: AMPDiscriminator = AMPDiscriminator()
+        alg_class = eval(self.alg_cfg.pop("class_name"))
+
+        min_std = torch.zeros(len(train_cfg["min_normalized_std"]), device=self.device, requires_grad=False)
+
+        self.alg: WMAMPPPO = alg_class(actor_critic, discriminator, amp_data, amp_normalizer, device=self.device,
+                                  min_std=min_std, **self.alg_cfg)
+        self.num_steps_per_env = self.cfg["num_steps_per_env"]
+        self.save_interval = self.cfg["save_interval"]
+
+        # init storage and model
+        self.alg.init_storage(self.training_type, self.env.num_envs, self.num_steps_per_env, [self.num_policy_dim],
+                              [num_critic_obs], [self.env.num_actions], self.history_dim, self.wm_feature_dim)
+
+        # Log
+        self.disable_logs = self.is_distributed and self.gpu_global_rank != 0
+
+        self.log_dir = log_dir
+        self.writer = None
+        self.tot_timesteps = 0
+        self.tot_time = 0
+        self.current_learning_iteration = 0
+        self.git_status_repos = [rsl_rl.__file__]
+        # ????
+        # _, _ = self.env.reset()
+
+
+    def _build_world_model(self):
+        # world model
+        print('Begin construct world model')
+        configs = yaml.safe_load(
+            (pathlib.Path(sys.argv[0]).parent.parent.parent / "rsl_rl/rsl_rl/dreamer/configs.yaml").read_text()
+        )
+
+        def recursive_update(base, update):
+            for key, value in update.items():
+                if isinstance(value, dict) and key in base:
+                    recursive_update(base[key], value)
+                else:
+                    base[key] = value
+
+        name_list = ["defaults"]
+        defaults = {}
+        for name in name_list:
+            recursive_update(defaults, configs[name])
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--headless", action="store_true", default=False)
+        parser.add_argument("--sim_device", default='cuda:0')
+        parser.add_argument("--wm_device", default='None')
+        parser.add_argument("--terrain", default='climb')
+        for key, value in sorted(defaults.items(), key=lambda x: x[0]):
+            arg_type = tools.args_type(value)
+            parser.add_argument(f"--{key}", type=arg_type, default=arg_type(value))
+        self.wm_config = parser.parse_args()
+        # allow world model and rl env on different device
+        if (self.wm_config.wm_device != 'None'):
+            self.wm_config.device = self.wm_config.wm_device
+        self.wm_config.num_actions = self.wm_config.num_actions * self.depth_predictor_cfg["update_interval"]
+        prop_dim = self.num_policy_dim - self.env.num_actions # 78 - 23 = 55
+        image_shape = self.depth_predictor_cfg["resized"] + (1,)
+        obs_shape = {'prop': (prop_dim,), 'image': image_shape,}
+
+        self._world_model = WorldModel(self.wm_config, obs_shape, use_camera=self.depth_predictor_cfg["use_camera"])
+        self._world_model = self._world_model.to(self._world_model.device)
+        print('Finish construct world model')
+        self.wm_feature_dim = self.wm_config.dyn_deter #+ self.wm_config.dyn_stoch * self.wm_config.dyn_discrete
+
+
+    def learn(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):
+        # initialize writer
+        if self.log_dir is not None and self.writer is None:
+            self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
+        if init_at_random_ep_len:
+            self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf,
+                                                             high=int(self.env.max_episode_length))
+        obs, extras = self.env.get_observations()
+        critic_obs = extras["observations"].get(self.privileged_obs_type, obs)
+        amp_obs = extras["observations"].get("amp_observations")
+        obs, critic_obs, amp_obs = obs.to(self.device), critic_obs.to(self.device), amp_obs.to(self.device)
+        self.train_mode()  # switch to train mode (for dropout for example)
+
+
+        ep_infos = []
+        rewbuffer = deque(maxlen=100)
+        lenbuffer = deque(maxlen=100)
+        cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+        cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+        # create buffers for logging extrinsic and intrinsic rewards
+        # Ensure all parameters are in-synced
+        if self.is_distributed:
+            print(f"Synchronizing parameters for rank {self.gpu_global_rank}...")
+            self.alg.broadcast_parameters()
+            # TODO: Do we need to synchronize empirical normalizers?
+            #   Right now: No, because they all should converge to the same values "asymptotically".
+
+        start_iter = self.current_learning_iteration
+        tot_iter = start_iter + num_learning_iterations
+
+        # process trajectory history # 75 * 5
+        self.trajectory_history = torch.zeros(size=(self.env.num_envs, self.history_length, self.num_policy_dim - 3),
+                                              device=self.device)
+        obs_without_command = torch.concat((obs[:, 0:6],obs[:, 9:]), dim=1)
+        self.trajectory_history = torch.concat((self.trajectory_history[:, 1:], obs_without_command.unsqueeze(1)),
+                                               dim=1)
+
+        # init world model input
+        sum_wm_dataset_size = 0
+        wm_latent = wm_action = None
+        wm_is_first = torch.ones(self.env.num_envs, device=self._world_model.device)
+        wm_obs = {
+            "prop": obs[:,: - self.env.num_actions].to(self._world_model.device),
+            "is_first": wm_is_first,
+        }
+        if (self.depth_predictor_cfg["use_camera"]):
+            wm_obs["image"] = torch.zeros(((self.env.num_envs,) + self.depth_predictor_cfg["resized"] + (1,)), device=self._world_model.device)
+
+        wm_metrics = None
+        self.wm_update_interval = self.depth_predictor_cfg["update_interval"]
+        wm_action_history = torch.zeros(size=(self.env.num_envs, self.wm_update_interval, self.env.num_actions),
+                                        device=self._world_model.device)
+        wm_reward = torch.zeros(self.env.num_envs, device=self._world_model.device)
+        wm_feature = torch.zeros((self.env.num_envs, self.wm_feature_dim))
+
+        self.init_wm_dataset()
+
+
+        for it in range(start_iter, tot_iter):
+            start = time.time()
+            # Rollout
+            with torch.inference_mode():
+                self.wm_counter = 0
+                for i in range(self.num_steps_per_env):
+                    self.wm_counter += 1
+                    if (self.wm_counter % self.wm_update_interval == 0):
+                        # (a) obs_step  
+                        wm_embed = self._world_model.encoder(wm_obs)  
+                        wm_latent, _ = self._world_model.dynamics.obs_step(wm_latent, wm_action, wm_embed, wm_obs["is_first"])  
+                        wm_feature = self._world_model.dynamics.get_deter_feat(wm_latent)  
+                        wm_is_first[:] = 0  
+                    history = self.trajectory_history.flatten(1).to(self.device)
+                    actions = self.alg.act(obs, critic_obs, amp_obs, history, wm_feature.to(self.device))
+                    obs, rewards, dones, infos = self.env.step(actions.to(self.device))
+                    _, extras = self.env.get_observations()
+                    next_amp_obs =  extras["observations"].get("amp_observations")
+                    critic_obs = extras["observations"][self.privileged_obs_type]
+
+                    obs, critic_obs, next_amp_obs, rewards, dones = obs.to(self.device), critic_obs.to(
+                        self.device), next_amp_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
+
+                    # update world model input
+                    wm_action_history = torch.concat(
+                        (wm_action_history[:, 1:], actions.unsqueeze(1).to(self._world_model.device)), dim=1)
+                    wm_obs = {
+                        "prop": obs[:,: -self.env.num_actions].to(self._world_model.device),
+                        "is_first": wm_is_first,
+                    }
+
+                    # store the data in buffer into the dataset before reset
+                    reset_mask = self.env.unwrapped.reset_buf.bool()  
+                    reset_ids = reset_mask.nonzero(as_tuple=False).flatten().cpu().numpy()  
+                    if (len(reset_ids) > 0):
+                        for k, v in self.wm_dataset.items():
+                            v[reset_ids, :] = self.wm_buffer[k][reset_ids].to(self._world_model.device)
+
+                        self.wm_dataset_size[reset_ids] = self.wm_buffer_index[reset_ids]
+                        self.wm_buffer_index[reset_ids] = 0
+                        sum_wm_dataset_size = np.sum(self.wm_dataset_size)
+
+                        wm_action_history[reset_ids, :] = 0
+                        # wm_reward[reset_ids] = 0  
+                        wm_is_first[reset_ids] = 1  
+
+                    wm_action = wm_action_history.flatten(1)  
+                    wm_reward += rewards.to(self._world_model.device)  
+                    # store current step into buffer
+                    if (self.wm_counter % self.wm_update_interval == 0):
+                        
+                        # (b) 累积 reward，构造 action  
+                        if (self.depth_predictor_cfg["use_camera"]):
+                            forward_heightmap = self.env.get_forward_map().to(self._world_model.device)
+                            pred_depth_image = self.depth_predictor(forward_heightmap, wm_obs["prop"])
+                            wm_obs["image"] = pred_depth_image
+                            self.wm_buffer["forward_height_map"][range(self.env.num_envs), self.wm_buffer_index,:] = forward_heightmap[:].to('cpu')
+                            wm_obs["image"] = infos["depth"].unsqueeze(-1).to(self._world_model.device)
+                            self.wm_buffer["image"][range(self.depth_predictor_cfg["camera_num_envs"]),
+                            self.wm_buffer_index, :] = wm_obs["image"].to('cpu')
+                        # not_reset_env_ids = (~dones).nonzero(as_tuple=False).flatten().cpu().numpy()
+                        not_reset_env_ids = (1- wm_is_first).nonzero(as_tuple=False).flatten().cpu().numpy()
+                        if (len(not_reset_env_ids) > 0):
+                            for k, v in wm_obs.items():
+                                if(k != "is_first" and k != "image"):
+                                    self.wm_buffer[k][not_reset_env_ids, self.wm_buffer_index[not_reset_env_ids], :] = v[not_reset_env_ids].to('cpu')
+                            self.wm_buffer["action"][not_reset_env_ids, self.wm_buffer_index[not_reset_env_ids], :] = wm_action[not_reset_env_ids, :].to('cpu')
+                            self.wm_buffer["reward"][not_reset_env_ids, self.wm_buffer_index[not_reset_env_ids]] = wm_reward[not_reset_env_ids].to('cpu')
+                            self.wm_buffer_index[not_reset_env_ids] += 1
+
+                        wm_reward[:] = 0
+
+                    # Account for terminal states.
+                    env_ids = dones.nonzero(as_tuple=False).flatten()
+
+                    terminal_amp_states = extras["observations"].get("amp_observations")[env_ids]
+
+                    next_amp_obs_with_term = torch.clone(next_amp_obs)
+                    next_amp_obs_with_term[env_ids] = terminal_amp_states
+
+                    rewards = self.alg.discriminator.predict_amp_reward(
+                        amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer)[0]
+                    amp_obs = torch.clone(next_amp_obs)
+                    self.alg.process_env_step(rewards, dones, infos, next_amp_obs_with_term)
+
+                    # process trajectory history
+                    self.trajectory_history[env_ids] = 0
+                    obs_without_command = torch.concat((obs[:, 0:6],obs[:, 9:]), dim=1)
+                    self.trajectory_history = torch.concat(
+                        (self.trajectory_history[:, 1:], obs_without_command.unsqueeze(1)), dim=1)
+
+                    if self.log_dir is not None:
+                        # Book keeping
+                        if 'episode' in infos:
+                            ep_infos.append(infos['episode'])
+                        elif "log" in infos:
+                            ep_infos.append(infos["log"])
+                        cur_reward_sum += rewards
+                        cur_episode_length += 1
+                        new_ids = (dones > 0).nonzero(as_tuple=False)
+                        rewbuffer.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                        lenbuffer.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
+                        cur_reward_sum[new_ids] = 0
+                        cur_episode_length[new_ids] = 0
+
+                stop = time.time()
+                collection_time = stop - start
+
+                # Learning step
+                start = stop
+                self.alg.compute_returns(critic_obs, wm_feature.to(self.device))
+            loss_dict = self.alg.update()
+            stop = time.time()
+            learn_time = stop - start
+            self.current_learning_iteration = it
+            # log info
+            if self.log_dir is not None and not self.disable_logs:
+                # Log information
+                self.log(locals())
+                # Save model
+                if it % self.save_interval == 0:
+                    self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+            ep_infos.clear()
+
+
+            start_time = time.time()
+            if (sum_wm_dataset_size > self.wm_config.train_start_steps):
+                if(it % self.depth_predictor_cfg["training_interval"] == 0):
+                    pass
+                # Train Depth Predictor
+                    # depth_mse_loss = self.train_depth_predictor()
+                    # self.writer.add_scalar('DepthPredictor/loss', depth_mse_loss, it)
+
+                # Train World Model
+                wm_metrics = self.train_world_model()
+                for name, values in wm_metrics.items():
+                    self.writer.add_scalar('World_model/' + name, float(np.mean(values)), it)
+                print('training world model time:', time.time() - start_time)
+
+
+        # Save the final model after training
+        if self.log_dir is not None and not self.disable_logs:
+            self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.pt"))
+
+    def init_wm_dataset(self):
+        self.wm_dataset = {
+            "prop": torch.zeros((self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3, self.num_policy_dim -23 ), device=self._world_model.device),
+            "action": torch.zeros((self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3, self.env.num_actions * self.wm_update_interval), device=self._world_model.device),
+            "reward": torch.zeros((self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3,), device=self._world_model.device),
+        }
+        if (self.depth_predictor_cfg["use_camera"]):
+            self.wm_dataset["image"] = torch.zeros(((self.depth_predictor_cfg["camera_num_envs"], int(self.env.max_episode_length / self.wm_update_interval) + 3,)
+                                                + self.depth_predictor_cfg["resized"] + (1,)), device=self._world_model.device)
+            self.wm_dataset["forward_height_map"] = torch.zeros(
+                (self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3,
+                    self.depth_predictor_cfg["forward_height_dim"]), device=self._world_model.device)
+
+        self.wm_dataset_size = np.zeros(self.env.num_envs)
+
+        self.wm_buffer = {
+            "prop": torch.zeros((self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3, self.num_policy_dim -23),device='cpu'),
+            "action": torch.zeros((self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3, self.env.num_actions * self.wm_update_interval), device='cpu'),
+            "reward": torch.zeros((self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3,), device='cpu'),
+        }
+        if (self.depth_predictor_cfg["use_camera"]):
+            self.wm_buffer["image"] = torch.zeros(((self.depth_predictor_cfg["camera_num_envs"], int(self.env.max_episode_length / self.wm_update_interval) + 3,)
+                                                + self.depth_predictor_cfg["resized"] + (1,)), device='cpu')
+            self.wm_buffer["forward_height_map"] = torch.zeros(
+                (self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3,
+                    self.depth_predictor_cfg["forward_height_dim"]), device='cpu')
+
+        self.wm_buffer_index = np.zeros(self.env.num_envs)
+
+    def train_depth_predictor(self):
+        total_mse_loss = 0
+        available_idx = np.arange(self.env.num_envs)
+        self.wm_buffer["image"] = torch.zeros(((self.depth_predictor_cfg["camera_num_envs"], int(self.env.max_episode_length / self.wm_update_interval) + 3,)
+                                            + self.depth_predictor_cfg["resized"] + (1,)), device='cpu')
+        self.wm_buffer["forward_height_map"] = torch.zeros(
+            (self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3,
+                self.depth_predictor_cfg["forward_height_dim"]), device='cpu')
+        self.wm_dataset["image"] = torch.zeros(((self.depth_predictor_cfg["camera_num_envs"], int(self.env.max_episode_length / self.wm_update_interval) + 3,)
+                                            + self.depth_predictor_cfg["resized"] + (1,)), device=self._world_model.device)
+        self.wm_dataset["forward_height_map"] = torch.zeros(
+            (self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3,
+                self.depth_predictor_cfg["forward_height_dim"]), device=self._world_model.device)
+        for _ in range(self.depth_predictor_cfg["training_iters"]):
+            batch_idx = np.random.choice(available_idx, self.depth_predictor_cfg["batch_size"],
+                                         replace=True)
+            time_index = [np.random.randint(0, self.wm_dataset_size[idx] + 1) for idx in batch_idx]
+            forward_heightmap = self.wm_dataset["forward_height_map"][batch_idx, time_index]
+            prop = self.wm_dataset["prop"][batch_idx, time_index]
+            depth_image = self.wm_dataset["image"][batch_idx, time_index]
+            # print("forward_heightmap",forward_heightmap.shape)
+            # print("prop",prop.shape)
+            predict_depth_image = self.depth_predictor(forward_heightmap, prop)
+            depth_predict_loss = (depth_image - predict_depth_image).pow(2).mean() * self.depth_predictor_cfg[
+                "loss_scale"]
+            # Gradient step
+            self.depth_predictor_opt.zero_grad()
+            depth_predict_loss.backward()
+            nn.utils.clip_grad_norm_(self.depth_predictor.parameters(), 1)
+            self.depth_predictor_opt.step()
+            total_mse_loss += depth_predict_loss.detach() / self.depth_predictor_cfg["loss_scale"]
+        return float(total_mse_loss / self.depth_predictor_cfg["training_iters"])
+
+    def train_world_model(self):
+        wm_metrics = {}
+        mets = {}
+        for i in range(self.wm_config.train_steps_per_iter):
+            p = self.wm_dataset_size / np.sum(self.wm_dataset_size)
+            batch_idx = np.random.choice(range(self.env.num_envs), self.wm_config.batch_size, replace=True,
+                                         p=p)
+            batch_length = min(int(self.wm_dataset_size[batch_idx].min()), self.wm_config.batch_length)
+            if (batch_length <= 1):
+                continue  # an error occur about the predict loss if batch_length < 1
+            batch_end_idx = [np.random.randint(batch_length, self.wm_dataset_size[idx] + 1) for idx in batch_idx]
+            batch_data = {}
+            for k, v in self.wm_dataset.items():
+                if (k == "forward_height_map"):
+                    continue
+                value = []
+                for idx, end_idx in zip(batch_idx, batch_end_idx):
+                    if (k == "image"):
+                        tmp_forward_heightmap = self.wm_dataset["forward_height_map"][idx,
+                                                end_idx - batch_length: end_idx]
+                        tmp_prop = self.wm_dataset["prop"][idx, end_idx - batch_length: end_idx]
+                        pred_depth_image = self.depth_predictor(tmp_forward_heightmap, tmp_prop)
+                        value.append(pred_depth_image)
+                    else:
+                        value.append(v[idx, end_idx - batch_length: end_idx])
+                value = torch.stack(value)
+                batch_data[k] = value
+            is_first = torch.zeros((self.wm_config.batch_size, batch_length))
+            is_first[:, 0] = 1
+            batch_data["is_first"] = is_first
+            post, context, mets = self._world_model._train(batch_data)
+        wm_metrics.update(mets)
+        return wm_metrics
+
+    def log(self, locs: dict, width: int = 80, pad: int = 35):
+
+        # Compute the collection size/root/booster_rl_tasks/rsl_rl/rsl_rl/runners/wmp_runner.py
+        collection_size = self.num_steps_per_env * self.env.num_envs * self.gpu_world_size
+        # Update total time-steps and time
+        self.tot_timesteps += collection_size
+        self.tot_time += locs["collection_time"] + locs["learn_time"]
+        iteration_time = locs["collection_time"] + locs["learn_time"]
+
+        # -- Episode info
+        ep_string = ""
+        if locs["ep_infos"]:
+            for key in locs["ep_infos"][0]:
+                infotensor = torch.tensor([], device=self.device)
+                for ep_info in locs["ep_infos"]:
+                    # handle scalar and zero dimensional tensor infos
+                    if key not in ep_info:
+                        continue
+                    if not isinstance(ep_info[key], torch.Tensor):
+                        ep_info[key] = torch.Tensor([ep_info[key]])
+                    if len(ep_info[key].shape) == 0:
+                        ep_info[key] = ep_info[key].unsqueeze(0)
+                    infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
+                value = torch.mean(infotensor)
+                # log to logger and terminal
+                if "/" in key:
+                    self.writer.add_scalar(key, value, locs["it"])
+                    ep_string += f"""{f'{key}:':>{pad}} {value:.4f}\n"""
+                else:
+                    self.writer.add_scalar("Episode/" + key, value, locs["it"])
+                    ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
+
+        mean_std = self.alg.policy.action_std.mean()
+        fps = int(collection_size / (locs["collection_time"] + locs["learn_time"]))
+
+        # -- Losses
+        for key, value in locs["loss_dict"].items():
+            self.writer.add_scalar(f"Loss/{key}", value, locs["it"])
+        self.writer.add_scalar("Loss/learning_rate", self.alg.learning_rate, locs["it"])
+
+        # -- Policy
+        self.writer.add_scalar("Policy/mean_noise_std", mean_std.item(), locs["it"])
+
+        # -- Performance
+        self.writer.add_scalar("Perf/total_fps", fps, locs["it"])
+        self.writer.add_scalar("Perf/collection time", locs["collection_time"], locs["it"])
+        self.writer.add_scalar("Perf/learning_time", locs["learn_time"], locs["it"])
+
+        # -- Training
+        if len(locs["rewbuffer"]) > 0:
+            self.writer.add_scalar("Train/mean_reward", statistics.mean(locs["rewbuffer"]), locs["it"])
+            self.writer.add_scalar("Train/mean_episode_length", statistics.mean(locs["lenbuffer"]), locs["it"])
+
+        str = f" \033[1m Learning iteration {locs['it']}/{locs['tot_iter']} \033[0m "
+        if len(locs["rewbuffer"]) > 0:
+            log_string = (
+                f"""{'#' * width}\n"""
+                f"""{str.center(width, ' ')}\n\n"""
+                f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
+                    'collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
+                f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
+            )
+            # -- Losses
+            for key, value in locs["loss_dict"].items():
+                log_string += f"""{f'Mean {key} loss:':>{pad}} {value:.4f}\n"""
+
+            log_string += f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
+            # -- episode info
+            log_string += f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n"""
+        else:
+            log_string = (
+                f"""{'#' * width}\n"""
+                f"""{str.center(width, ' ')}\n\n"""
+                f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs[
+                    'collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
+                f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
+            )
+            for key, value in locs["loss_dict"].items():
+                log_string += f"""{f'{key}:':>{pad}} {value:.4f}\n"""
+
+        log_string += ep_string
+        log_string += (
+            f"""{'-' * width}\n"""
+            f"""{'Total timesteps:':>{pad}} {self.tot_timesteps}\n"""
+            f"""{'Iteration time:':>{pad}} {iteration_time:.2f}s\n"""
+            f"""{'Time elapsed:':>{pad}} {time.strftime("%H:%M:%S", time.gmtime(self.tot_time))}\n"""
+            f"""{'ETA:':>{pad}} {time.strftime("%H:%M:%S", time.gmtime(self.tot_time / (locs['it'] - locs['start_iter'] + 1) * (
+                               locs['start_iter'] + locs['num_learning_iterations'] - locs['it'])))}\n"""
+        )
+        print(log_string)
+
+    def save(self, path: str, infos=None):
+        torch.save({
+            'model_state_dict': self.alg.policy.state_dict(),
+            'optimizer_state_dict': self.alg.optimizer.state_dict(),
+            'world_model_dict': self._world_model.state_dict(),
+            'wm_optimizer_state_dict': self._world_model._model_opt._opt.state_dict(),
+            'depth_predictor': self.depth_predictor.state_dict(),
+            # 'discriminator_state_dict': self.alg.discriminator.state_dict(),
+            # 'amp_normalizer': self.alg.amp_normalizer,
+            'iter': self.current_learning_iteration,
+            'infos': infos,
+        }, path)
+
+    def load(self, path, load_optimizer=True, load_wm_optimizer = False):
+        loaded_dict = torch.load(path, map_location=self.device)
+        self.alg.policy.load_state_dict(loaded_dict['model_state_dict'], strict=False)
+        self._world_model.load_state_dict(loaded_dict['world_model_dict'], strict=False)
+        if(load_wm_optimizer):
+            self._world_model._model_opt._opt.load_state_dict(loaded_dict['wm_optimizer_state_dict'])
+        # self.alg.discriminator.load_state_dict(loaded_dict['discriminator_state_dict'], strict=False)
+        # self.alg.amp_normalizer = loaded_dict['amp_normalizer']
+        if load_optimizer:
+            self.alg.optimizer.load_state_dict(loaded_dict['optimizer_state_dict'])
+        self.current_learning_iteration = loaded_dict['iter']
+        return loaded_dict['infos']
+
+    def get_inference_policy(self, device=None):
+        self.eval_mode()  # switch to evaluation mode (dropout for example)
+        if device is not None:
+            self.alg.policy.to(device)
+        return self.alg.policy.act_inference
+    
+    def train_mode(self):
+        # -- PPO
+        self.alg.policy.train()
+        self.alg.discriminator.train()
+        # -- RND
+        if self.alg.rnd:
+            self.alg.rnd.train()
+
+
+    def eval_mode(self):
+        # -- PPO
+        self.alg.policy.eval()
+        self.alg.discriminator.eval()
+        # -- RND
+        if self.alg.rnd:
+            self.alg.rnd.eval()
+
+    def add_git_repo_to_log(self, repo_file_path):
+        self.git_status_repos.append(repo_file_path)
+    """
+    Helper functions.
+    """
+
+    def _configure_multi_gpu(self):
+        """Configure multi-gpu training."""
+        # check if distributed training is enabled
+        self.gpu_world_size = int(os.getenv("WORLD_SIZE", "1"))
+        self.is_distributed = self.gpu_world_size > 1
+
+        # if not distributed training, set local and global rank to 0 and return
+        if not self.is_distributed:
+            self.gpu_local_rank = 0
+            self.gpu_global_rank = 0
+            self.multi_gpu_cfg = None
+            return
+
+        # get rank and world size
+        self.gpu_local_rank = int(os.getenv("LOCAL_RANK", "0"))
+        self.gpu_global_rank = int(os.getenv("RANK", "0"))
+
+        # make a configuration dictionary
+        self.multi_gpu_cfg = {
+            "global_rank": self.gpu_global_rank,  # rank of the main process
+            "local_rank": self.gpu_local_rank,  # rank of the current process
+            "world_size": self.gpu_world_size,  # total number of processes
+        }
+
+        # check if user has device specified for local rank
+        if self.device != f"cuda:{self.gpu_local_rank}":
+            raise ValueError(
+                f"Device '{self.device}' does not match expected device for local rank '{self.gpu_local_rank}'."
+            )
+        # validate multi-gpu configuration
+        if self.gpu_local_rank >= self.gpu_world_size:
+            raise ValueError(
+                f"Local rank '{self.gpu_local_rank}' is greater than or equal to world size '{self.gpu_world_size}'."
+            )
+        if self.gpu_global_rank >= self.gpu_world_size:
+            raise ValueError(
+                f"Global rank '{self.gpu_global_rank}' is greater than or equal to world size '{self.gpu_world_size}'."
+            )
+
+        # initialize torch distributed
+        torch.distributed.init_process_group(backend="nccl", rank=self.gpu_global_rank, world_size=self.gpu_world_size)
+        # set device to the local rank
+        torch.cuda.set_device(self.gpu_local_rank)
