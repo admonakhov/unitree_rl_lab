@@ -183,7 +183,7 @@ class CommandsCfg:
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
         # allow more frequent resampling to improve responsiveness when turning
-        resampling_time_range=(0.0, 0.0),
+        resampling_time_range=(1000.0, 1000.0),
         rel_standing_envs=0.0,
         rel_heading_envs=0.0,
         # enable heading command so policy receives/uses target heading
@@ -219,15 +219,15 @@ class CommandsCfg:
             'mocap/arcus2/walking/walk2_f.npz',
                     ],
 
-        velocity_smoothing_alpha = 0.95,
+        velocity_smoothing_alpha = 0.9,
         velocity_factor = 1,
         motion_assignment = 'round_robin', # round_robin or random
         anchor_body_name = "torso_link",
 
         adaptive_alpha = 0.000,
         adaptive_uniform_ratio = 1,
-        threshold_velocity_cmd = 0.1,
-        resampling_time_range=(100.0, 1000.0), 
+        threshold_velocity_cmd = 0,
+        resampling_time_range=(1000.0, 1000.0), 
         debug_vis=True,
         
         pose_range={
@@ -375,56 +375,63 @@ class RewardsCfg:
     )
 
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1)
-
+    base_angular_velocity = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     joint_deviation_legs = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-1.0,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_hip_roll_joint", ".*_hip_yaw_joint"])},
     )
 
+    # joint_deviation_ankle = RewTerm(
+    #     func=mdp.joint_deviation_l1,
+    #     weight=-3.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_ankle_.*",])},
+    # )
+
+
     # -- tracking
     motion_global_anchor_pos = RewTerm(
         func=mimic_mdp.motion_global_anchor_position_error_exp,
-        weight=0.25,
+        weight=0.75,
         params={"command_name": "motion", "std": 0.3},
     )
     motion_global_anchor_ori = RewTerm(
         func=mimic_mdp.motion_global_anchor_orientation_error_exp,
-        weight=0.25,
+        weight=0.75,
         params={"command_name": "motion", "std": 0.4},
     )
     motion_body_pos = RewTerm(
         func=mimic_mdp.motion_relative_body_position_error_exp,
-        weight=1,
+        weight=1.5,
         params={"command_name": "motion", "std": 0.3},
     )
     motion_body_ori = RewTerm(
         func=mimic_mdp.motion_relative_body_orientation_error_exp,
-        weight=1,
+        weight=1.5,
         params={"command_name": "motion", "std": 0.4},
     )
     motion_body_lin_vel = RewTerm(
         func=mimic_mdp.motion_global_body_linear_velocity_error_exp,
-        weight=1,
+        weight=1.5,
         params={"command_name": "motion", "std": 1.0},
     )
     motion_body_ang_vel = RewTerm(
         func=mimic_mdp.motion_global_body_angular_velocity_error_exp,
-        weight=1,
+        weight=1.5,
         params={"command_name": "motion", "std": 3.14},
     )
 
 
     joint_body_pos = RewTerm(
         func=mimic_mdp.motion_joint_position_error_exp,
-        weight=1,
+        weight=1.5,
         params={"command_name": "motion", "std": 0.3},
     )
 
 
     joint_body_vel = RewTerm(
         func=mimic_mdp.motion_joint_velocity_error_exp,
-        weight=1,
+        weight=1.5,
         params={"command_name": "motion", "std": 1},
     )
 

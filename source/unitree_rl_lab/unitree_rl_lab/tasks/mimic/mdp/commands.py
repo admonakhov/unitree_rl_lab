@@ -354,9 +354,13 @@ class MotionCommand(CommandTerm):
     def _update_command(self):
         self.time_steps += 1
         # detect envs that reached the end of their assigned motion
+
+
         lengths_per_env = self.motion_lengths[self.motion_ids]
         env_ids = torch.where(self.time_steps >= lengths_per_env)[0]
-        self._resample_command(env_ids)
+        if len(env_ids) > 0:
+            self.time_steps[env_ids] = 0
+        # self._resample_command(env_ids)
         # if len(env_ids) > 0:
         #     # reset time to start of the same motion (disable resampling/mixing)
         #     self.time_steps[env_ids] = 0
@@ -402,9 +406,9 @@ class MotionCommand(CommandTerm):
                     + (1.0 - self.cfg.velocity_smoothing_alpha) * target_vel
                 )
 
-                velocity_commands[:, 0] = torch.trunc(self.velocity_command_smoothed[:, 0] * 25 / self.cfg.velocity_factor) / 25
-                velocity_commands[:, 1] = torch.trunc(self.velocity_command_smoothed[:, 1] * 25) / 25
-                velocity_commands[:, 2] = torch.trunc(self.velocity_command_smoothed[:, 2] * 25) / 25
+                velocity_commands[:, 0] = self.velocity_command_smoothed[:, 0]
+                velocity_commands[:, 1] = self.velocity_command_smoothed[:, 1]
+                velocity_commands[:, 2] = self.velocity_command_smoothed[:, 2]
 
                 velocity_commands = torch.where(torch.abs(velocity_commands) <= self.cfg.threshold_velocity_cmd, torch.zeros_like(velocity_commands), velocity_commands)
                 # print(velocity_commands)
