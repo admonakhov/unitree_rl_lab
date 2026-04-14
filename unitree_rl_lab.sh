@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
 export UNITREE_RL_LAB_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+BOOSTER_AMP_RSL_RL_PATH="$(dirname "${UNITREE_RL_LAB_PATH}")/booster_amp_lab/rsl_rl"
+if [ -d "${BOOSTER_AMP_RSL_RL_PATH}" ]; then
+    export PYTHONPATH="${BOOSTER_AMP_RSL_RL_PATH}:${PYTHONPATH}"
+fi
 
 if ! [[ -z "${CONDA_PREFIX}" ]]; then
     python_exe=${CONDA_PREFIX}/bin/python
