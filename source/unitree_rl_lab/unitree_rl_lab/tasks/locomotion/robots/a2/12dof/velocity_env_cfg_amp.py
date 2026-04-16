@@ -86,11 +86,14 @@ class CommandsCfg:
         resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.02,
         rel_heading_envs=1.0,
-        heading_command=False,
+        heading_command=True,  
         heading_control_stiffness=0.5,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(0.0, 1.0), lin_vel_y=(0.0, 0.0), ang_vel_z=(-0.5, 0.5)
+            lin_vel_x=(0, 1.0), 
+            lin_vel_y=(-0.5, 0.5), 
+            ang_vel_z=(-1, 1),
+            heading=(-3.14159, 3.14159) 
         ),
     )
 
@@ -99,7 +102,7 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the MDP."""
     JointPositionAction = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.15, use_default_offset=True
+        asset_name="robot", joint_names=[".*"], scale=0.25, use_default_offset=True
         )
 
 @configclass
@@ -110,13 +113,15 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        # observation terms (order preserved)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=GaussianNoise(mean=0.0, std=0.05),clip=(-100.0, 100.0),scale=1.0,)
-        projected_gravity = ObsTerm(func=mdp.projected_gravity,noise=GaussianNoise(mean=0.0, std=0.025),clip=(-100.0, 100.0),scale=1.0,)
+        # Velocity command observations
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel,  scale=0.2, noise=Unoise(n_min=-0.2, n_max=0.2))
+        projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.1, n_max=0.1))
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos, noise=GaussianNoise(mean=0.0, std=0.01),clip=(-100.0, 100.0),scale=1.0,)
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel, noise=GaussianNoise(mean=0.0, std=0.01),clip=(-100.0, 100.0),scale=1.0,)
-        last_action = ObsTerm(func=mdp.last_action, noise=GaussianNoise(mean=0.0, std=0.01),clip=(-100.0, 100.0),scale=1.0,)
+
+        # heading_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity", "term_attr": "heading"})
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.02, n_max=0.02))
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, noise=Unoise(n_min=-1.5, n_max=1.5))
+        last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
             self.history_length = 5
@@ -125,52 +130,23 @@ class ObservationsCfg:
 
     @configclass
     class PrivilegedCfg(ObsGroup):
-        # robot base measurements
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel,clip=(-100.0, 100.0),scale=1.0,)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel,clip=(-100.0, 100.0),scale=1.0,)
-        projected_gravity = ObsTerm(func=mdp.projected_gravity,clip=(-100.0, 100.0),scale=1.0,)
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2)
+        projected_gravity = ObsTerm(func=mdp.projected_gravity)
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-
-        # robot joint measurements
-        joint_pos = ObsTerm(func=mdp.joint_pos, clip=(-100.0, 100.0), scale=1.0,)
-        joint_vel = ObsTerm(func=mdp.joint_vel, clip=(-100.0, 100.0), scale=1.0,)
-
-        # last action
-        actions = ObsTerm(func=mdp.last_action, clip=(-100.0, 100.0), scale=1.0,)
-        heights = ObsTerm(func=mdp.height_scan, params = {"sensor_cfg": SceneEntityCfg("height_scanner")},
-                    noise=GaussianNoise(mean=0.0, std=0.01),
-                    clip = (0.0, 10.0))
-        
-        # Privileged observation
-        robot_joint_torque = ObsTerm(func=mdp.robot_joint_torque)
-        robot_joint_acc = ObsTerm(func=mdp.robot_joint_acc)
-        robot_feet_contact_force = ObsTerm(
-            func=mdp.robot_contact_force,
-            params={
-                "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_ankle_.*"),
-            },
-        )
-
-        robot_mass = ObsTerm(func=mdp.robot_mass)
-        # robot_inertia = ObsTerm(func=mdp.robot_inertia)
-        robot_joint_stiffness = ObsTerm(func=mdp.robot_joint_stiffness)
-        robot_joint_damping = ObsTerm(func=mdp.robot_joint_damping)
-        # robot_pos = ObsTerm(func=mdp.robot_pos)
-        # robot_vel = ObsTerm(func=mdp.robot_vel)
-        robot_material_propertirs = ObsTerm(func=mdp.robot_material_properties)
-        robot_base_pose = ObsTerm(func=mdp.robot_base_pose)
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel)
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel)
+        last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
             self.history_length = 5
-            self.enable_corruption = False
-            self.concatenate_terms = True
 
     @configclass
     class AMPObsCfg(ObsGroup):
         joint_pos = ObsTerm(func=mdp.joint_pos, clip=(-100.0, 100.0), scale=1.0,)
         joint_vel = ObsTerm(func=mdp.joint_vel, clip=(-100.0, 100.0), scale=1.0,)
-        left_hand_pos = ObsTerm(func=mdp.get_lefthand_pos, clip=(-100.0, 100.0), scale=1.0,)
-        right_hand_pos = ObsTerm(func=mdp.get_righthand_pos, clip=(-100.0, 100.0), scale=1.0,)
+        left_hand_pos = ObsTerm(func=mdp.get_lefthand_pos, clip=(-100.0, 100.0), scale=0.0,)
+        right_hand_pos = ObsTerm(func=mdp.get_righthand_pos, clip=(-100.0, 100.0), scale=0.0,)
         left_foot_pos = ObsTerm(func=mdp.get_leftfoot_pos, clip=(-100.0, 100.0), scale=1.0,)
         right_foot_pos = ObsTerm(func=mdp.get_rightfoot_pos, clip=(-100.0, 100.0), scale=1.0,)
 
@@ -213,7 +189,18 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="torso_link"),
-            "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.01, 0.01)},
+            "com_range": {"x": (-0.1, 0.1), "y": (-0.1, 0.1), "z": (-0.1, 0.1)},
+        },
+    )
+
+
+    add_joint_default_pos = EventTerm(
+        func=mdp.randomize_joint_default_pos,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+            "pos_distribution_params": (-0.1, 0.1),
+            "operation": "add",
         },
     )
 
@@ -276,7 +263,7 @@ class RewardsCfg:
         func=mdp.stay_alive,
         weight=1.0
     )
-    pen_base_height = RewTerm(func=mdp.base_height_l2, params={"target_height": 0.95}, weight=-2.0)
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-2, params={"target_height": 0.95})
 
     stand_still = RewTerm(
         func=mdp.stand_still,
@@ -290,13 +277,18 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_ankle_.*"]),
         },
     )
-
     track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_exp, weight=2.0, params={"command_name": "base_velocity", "std": math.sqrt(0.5)}
+        func=mdp.track_lin_vel_xy_exp, weight=5.0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
     track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=1.2, params={"command_name": "base_velocity", "std": math.sqrt(0.5)}
+        func=mdp.track_ang_vel_z_exp, weight=2.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
+    # # Награда за tracking heading (поворот в нужном направлении)
+    # track_heading = RewTerm(
+    #     func=mdp_loco.track_heading_exp,
+    #     weight=1.0,
+    #     params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
+    # )
     # # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
@@ -323,7 +315,6 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.4})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.4})
-
 
 
 @configclass

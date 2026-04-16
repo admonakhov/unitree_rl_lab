@@ -28,7 +28,7 @@ parser.add_argument("--motion", type=str, default=None, help="Path to the motion
 parser.add_argument("--motion_pkl", type=str, default=None, help="Path to the motion pkl file to convert and replay.")
 parser.add_argument("--fps", type=float, default=30.0, help="Target frames per second for replay.")
 parser.add_argument("--save_path", type=str, default=None, help="Path to save the converted txt file")
-parser.add_argument("--robot", choices=["booster_t1","booster_k1"], default="booster_t1", help="Which robot do you want to retarget")
+
 
 
 # append AppLauncher cli args
@@ -177,7 +177,6 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
             right_hand_pos = (robot.data.body_state_w[:, elbow_body_ids[1], :3] - robot.data.root_state_w[:, 0:3] + quat_apply(robot.data.body_state_w[:, elbow_body_ids[1], 3:7], right_arm_local_vec))
             left_hand_pos = quat_apply(quat_conjugate(robot.data.root_state_w[:, 3:7]), left_hand_pos)
             right_hand_pos = quat_apply(quat_conjugate(robot.data.root_state_w[:, 3:7]), right_hand_pos)
-
             # foot
             left_foot_pos = (robot.data.body_state_w[:, feet_body_ids[0], :3] - robot.data.root_state_w[:, 0:3])
             right_foot_pos = (robot.data.body_state_w[:, feet_body_ids[1], :3] - robot.data.root_state_w[:, 0:3])
@@ -231,7 +230,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
 
 def reorder(motion):
     idx = [0, 6, 12, 1, 7, 16, 13, 14, 15, 17, 21, 18, 19, 20, 22, 2, 8, 3, 9, 4, 10, 5, 11]
-    return motion[idx]
+    motion = motion[idx]
+    return motion
 
 
 def convert_pkl_to_custom(input_pkl, output_txt, fps):
@@ -245,7 +245,6 @@ def convert_pkl_to_custom(input_pkl, output_txt, fps):
     root_rot = motion_data["root_rot"][:, [3, 0, 1, 2]]  # xyzw → wxyz
     dof_pos = motion_data["dof_pos"]
     # dof_pos = dof_pos[:, idx]
-    print(dof_pos.shape)
 
     root_lin_vel = (root_pos[1:] - root_pos[:-1]) / dt
     root_rot_t = torch.tensor(root_rot, dtype=torch.float32)

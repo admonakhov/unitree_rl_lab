@@ -143,15 +143,15 @@ class EventCfg:
         },
     )
 
-    add_joint_default_pos = EventTerm(
-        func=mimic_mdp.randomize_joint_default_pos,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
-            "pos_distribution_params": (-0.1, 0.1),
-            "operation": "add",
-        },
-    )
+    # add_joint_default_pos = EventTerm(
+    #     func=mimic_mdp.randomize_joint_default_pos,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+    #         "pos_distribution_params": (-0.1, 0.1),
+    #         "operation": "add",
+    #     },
+    # )
 
     base_com = EventTerm(
         func=mimic_mdp.randomize_rigid_body_com,

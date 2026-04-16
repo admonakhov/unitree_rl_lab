@@ -87,15 +87,13 @@ ARCUS_A1_23DOF_CFG = UnitreeArticulationCfg(
         "right_ankle_pitch_joint",
         "right_ankle_roll_joint",
         "waist_yaw_joint",
-        "",
-        "",
+
         "left_shoulder_pitch_joint",
         "left_shoulder_roll_joint",
         "left_shoulder_yaw_joint",
         "left_elbow_joint",
         "left_wrist_roll_joint",
-        "",
-        "",
+
         "right_shoulder_pitch_joint",
         "right_shoulder_roll_joint",
         "right_shoulder_yaw_joint",

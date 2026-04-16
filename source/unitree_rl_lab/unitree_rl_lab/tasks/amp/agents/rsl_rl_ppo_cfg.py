@@ -78,18 +78,25 @@ class BaseAMPAgentCfg(RslRlOnPolicyRunnerCfg):
     clip_actions = None
     save_interval = 100
     runner_class_name = "AmpOnPolicyRunner"
-    experiment_name = "run"
+    experiment_name = ""
     run_name = ""
     logger = "tensorboard"
-    neptune_project = "run"
-    wandb_project = "run"
+    neptune_project = ""
+    wandb_project = ""
     resume = False
     load_run = ".*"
     load_checkpoint = "model_.*.pt"
 
     # amp parameter
     amp_reward_coef = 0.3
-    amp_motion_files = ["mocap/arcus2/discriminator/walk2.txt", "mocap/arcus2/discriminator/walk2_f.txt", "mocap/arcus2/discriminator/arc1.txt", "mocap/arcus2/discriminator/arc1_f.txt"]
+    amp_motion_files = [
+                        "mocap/arcus2/discriminator/walk2.txt",
+                        "mocap/arcus2/discriminator/walk2_f.txt", 
+                        "mocap/arcus2/discriminator/arc1.txt", 
+                        "mocap/arcus2/discriminator/arc1_f.txt",
+                        "mocap/arcus2/discriminator/rot1.txt", 
+                        "mocap/arcus2/discriminator/rot2.txt"
+                        ]
     amp_num_preload_transitions = 200000
     amp_task_reward_lerp = 0.7
     amp_discr_hidden_dims = [1024, 512, 256]
