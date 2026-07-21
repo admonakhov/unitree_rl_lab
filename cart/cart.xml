@@ -1,0 +1,49 @@
+<mujoco model="multi_level_profile_cart">
+  <compiler angle="radian"/>
+
+  <worldbody>
+    <body name="base_link" pos="0.5 0.0 0.125" quat="0 0 0 1">
+      <inertial pos="0 -0.189474 0.05" quat="0.5 0.5 -0.5 0.5" mass="9.5" diaginertia="1.08895 0.938947 0.45"/>
+      <joint name="floating_base_joint2" type="free"/>
+      <geom size="0.25 0.2 0.01" pos="0 0 0.25" type="box" rgba="0.3 0.32 0.36 1"/>
+      <geom size="0.25 0.2 0.01" pos="0 0 0.45" type="box" rgba="0.3 0.32 0.36 1"/>
+      <geom size="0.25 0.2 0.01" pos="0 0 0.65" type="box" rgba="0.3 0.32 0.36 1"/>
+      <body name="front_left_wheel_mount" pos="0.22 0.2 0">
+        <inertial pos="0 0 0" mass="0.2" diaginertia="0.0002 0.0002 0.0002"/>
+        <joint name="front_left_wheel_yaw_joint" pos="0 0 0" axis="0 0 1" damping="0.05" frictionloss="0.01"/>
+        <body name="front_left_wheel">
+          <inertial pos="0 0 0" mass="0.5" diaginertia="0.003 0.003 0.003"/>
+          <joint name="front_left_wheel_spin_joint" pos="0 0 0" axis="1 0 0" damping="0.05" frictionloss="0.01"/>
+          <geom size="0.08 0.03" quat="0.707107 0 0.707107 0" type="cylinder" rgba="0.08 0.08 0.08 1"/>
+        </body>
+      </body>
+      <body name="front_right_wheel_mount" pos="0.22 -0.2 0">
+        <inertial pos="0 0 0" mass="0.2" diaginertia="0.0002 0.0002 0.0002"/>
+        <joint name="front_right_wheel_yaw_joint" pos="0 0 0" axis="0 0 1" damping="0.05" frictionloss="0.01"/>
+        <body name="front_right_wheel">
+          <inertial pos="0 0 0" mass="0.5" diaginertia="0.003 0.003 0.003"/>
+          <joint name="front_right_wheel_spin_joint" pos="0 0 0" axis="1 0 0" damping="0.05" frictionloss="0.01"/>
+          <geom size="0.08 0.03" quat="0.707107 0 0.707107 0" type="cylinder" rgba="0.08 0.08 0.08 1"/>
+        </body>
+      </body>
+      <body name="rear_left_wheel_mount" pos="-0.22 0.2 0">
+        <inertial pos="0 0 0" mass="0.2" diaginertia="0.0002 0.0002 0.0002"/>
+        <joint name="rear_left_wheel_yaw_joint" pos="0 0 0" axis="0 0 1" damping="0.05" frictionloss="0.01"/>
+        <body name="rear_left_wheel">
+          <inertial pos="0 0 0" mass="0.5" diaginertia="0.003 0.003 0.003"/>
+          <joint name="rear_left_wheel_spin_joint" pos="0 0 0" axis="1 0 0" damping="0.05" frictionloss="0.01"/>
+          <geom size="0.08 0.03" quat="0.707107 0 0.707107 0" type="cylinder" rgba="0.08 0.08 0.08 1"/>
+        </body>
+      </body>
+      <body name="rear_right_wheel_mount" pos="-0.22 -0.2 0">
+        <inertial pos="0 0 0" mass="0.2" diaginertia="0.0002 0.0002 0.0002"/>
+        <joint name="rear_right_wheel_yaw_joint" pos="0 0 0" axis="0 0 1" damping="0.05" frictionloss="0.01"/>
+        <body name="rear_right_wheel">
+          <inertial pos="0 0 0" mass="0.5" diaginertia="0.003 0.003 0.003"/>
+          <joint name="rear_right_wheel_spin_joint" pos="0 0 0" axis="1 0 0" damping="0.05" frictionloss="0.01"/>
+          <geom size="0.08 0.03" quat="0.707107 0 0.707107 0" type="cylinder" rgba="0.08 0.08 0.08 1"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

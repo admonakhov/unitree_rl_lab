@@ -1,0 +1,327 @@
+<?xml version="1.0"?>
+<robot name="multi_level_profile_cart">
+
+  <!-- [CAUTION] uncomment when convert to mujoco -->
+  <link name="world"></link>
+  <joint name="floating_base_joint" type="floating">
+    <parent link="world"/>
+    <child link="base_link"/>
+  </joint>
+
+  <material name="frame_material">
+    <color rgba="0.30 0.32 0.36 1.0"/>
+  </material>
+  <material name="wheel_material">
+    <color rgba="0.08 0.08 0.08 1.0"/>
+  </material>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="0.25" ixy="0.0" ixz="0.0" iyy="0.30" iyz="0.0" izz="0.35"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.50 0.40 0.02"/>
+      </geometry>
+      <material name="frame_material"/>
+    </visual>
+    <!-- <collision>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.50 0.40 0.02"/>
+      </geometry>
+    </collision> -->
+  </link>
+
+  <link name="level1_link">
+    <inertial>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <mass value="1.5"/>
+      <inertia ixx="0.08" ixy="0.0" ixz="0.0" iyy="0.06" iyz="0.0" izz="0.10"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.50 0.40 0.02"/>
+      </geometry>
+      <material name="frame_material"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.50 0.40 0.02"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="level1_fixed_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="level1_link"/>
+    <origin xyz="0 0 0.20" rpy="0 0 0"/>
+  </joint>
+
+  <link name="level2_link">
+    <inertial>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <mass value="1.5"/>
+      <inertia ixx="0.06" ixy="0.0" ixz="0.0" iyy="0.05" iyz="0.0" izz="0.08"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.50 0.40 0.02"/>
+      </geometry>
+      <material name="frame_material"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.50 0.40 0.02"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="level2_fixed_joint" type="fixed">
+    <parent link="level1_link"/>
+    <child link="level2_link"/>
+    <origin xyz="0 0 0.20" rpy="0 0 0"/>
+  </joint>
+
+  <link name="level3_link">
+    <inertial>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <mass value="1.5"/>
+      <inertia ixx="0.05" ixy="0.0" ixz="0.0" iyy="0.04" iyz="0.0" izz="0.06"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.50 0.40 0.02"/>
+      </geometry>
+      <material name="frame_material"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.50 0.40 0.02"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="level3_fixed_joint" type="fixed">
+    <parent link="level2_link"/>
+    <child link="level3_link"/>
+    <origin xyz="0 0 0.20" rpy="0 0 0"/>
+  </joint>
+
+  <link name="front_left_wheel_mount">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.2"/>
+      <inertia ixx="0.0002" ixy="0.0" ixz="0.0" iyy="0.0002" iyz="0.0" izz="0.0002"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.04"/>
+      </geometry>
+      <material name="frame_material"/>
+    </visual>
+  </link>
+
+  <joint name="front_left_wheel_yaw_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="front_left_wheel_mount"/>
+    <origin xyz="0.22 0.20 0.00" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.05" friction="0.01"/>
+  </joint>
+
+  <link name="front_left_wheel">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.003" ixy="0.0" ixz="0.0" iyy="0.003" iyz="0.0" izz="0.003"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.06"/>
+      </geometry>
+      <material name="wheel_material"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.06"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="front_left_wheel_spin_joint" type="continuous">
+    <parent link="front_left_wheel_mount"/>
+    <child link="front_left_wheel"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.05" friction="0.01"/>
+  </joint>
+
+  <link name="front_right_wheel_mount">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.2"/>
+      <inertia ixx="0.0002" ixy="0.0" ixz="0.0" iyy="0.0002" iyz="0.0" izz="0.0002"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.04"/>
+      </geometry>
+      <material name="frame_material"/>
+    </visual>
+  </link>
+
+  <joint name="front_right_wheel_yaw_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="front_right_wheel_mount"/>
+    <origin xyz="0.22 -0.20 0.0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.05" friction="0.01"/>
+  </joint>
+
+  <link name="front_right_wheel">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.003" ixy="0.0" ixz="0.0" iyy="0.003" iyz="0.0" izz="0.003"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.06"/>
+      </geometry>
+      <material name="wheel_material"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.06"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="front_right_wheel_spin_joint" type="continuous">
+    <parent link="front_right_wheel_mount"/>
+    <child link="front_right_wheel"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.05" friction="0.01"/>
+  </joint>
+
+  <link name="rear_left_wheel_mount">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.2"/>
+      <inertia ixx="0.0002" ixy="0.0" ixz="0.0" iyy="0.0002" iyz="0.0" izz="0.0002"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.04"/>
+      </geometry>
+      <material name="frame_material"/>
+    </visual>
+  </link>
+
+  <joint name="rear_left_wheel_yaw_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_left_wheel_mount"/>
+    <origin xyz="-0.22 0.20 0.0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.05" friction="0.01"/>
+  </joint>
+
+  <link name="rear_left_wheel">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.003" ixy="0.0" ixz="0.0" iyy="0.003" iyz="0.0" izz="0.003"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.06"/>
+      </geometry>
+      <material name="wheel_material"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.06"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="rear_left_wheel_spin_joint" type="continuous">
+    <parent link="rear_left_wheel_mount"/>
+    <child link="rear_left_wheel"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.05" friction="0.01"/>
+  </joint>
+
+  <link name="rear_right_wheel_mount">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.2"/>
+      <inertia ixx="0.0002" ixy="0.0" ixz="0.0" iyy="0.0002" iyz="0.0" izz="0.0002"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.04"/>
+      </geometry>
+      <material name="frame_material"/>
+    </visual>
+  </link>
+
+  <joint name="rear_right_wheel_yaw_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_right_wheel_mount"/>
+    <origin xyz="-0.22 -0.20 0.0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.05" friction="0.01"/>
+  </joint>
+
+  <link name="rear_right_wheel">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.003" ixy="0.0" ixz="0.0" iyy="0.003" iyz="0.0" izz="0.003"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.06"/>
+      </geometry>
+      <material name="wheel_material"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.57079632679 0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.06"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="rear_right_wheel_spin_joint" type="continuous">
+    <parent link="rear_right_wheel_mount"/>
+    <child link="rear_right_wheel"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <dynamics damping="0.05" friction="0.01"/>
+  </joint>
+</robot>

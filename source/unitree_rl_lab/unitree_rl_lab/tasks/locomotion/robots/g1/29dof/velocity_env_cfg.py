@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import isaaclab.sim as sim_utils
 import isaaclab.terrains as terrain_gen
@@ -21,6 +22,11 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from unitree_rl_lab.assets.robots.unitree import UNITREE_G1_29DOF_CFG as ROBOT_CFG
 from unitree_rl_lab.tasks.locomotion import mdp
 
+
+CART_URDF_PATH =  "cart/cart.urdf"
+CART_ENV_RATIO = 0.5
+
+
 COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
     border_width=20.0,
@@ -40,6 +46,10 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
 @configclass
 class RobotSceneCfg(InteractiveSceneCfg):
     """Configuration for the terrain scene with a legged robot."""
+
+    # USD collision filters are authored per environment before PhysX starts.
+    # Physics replication shares those USD properties across clones, so disable it.
+    replicate_physics = False
 
     # ground terrain
     terrain = TerrainImporterCfg(
@@ -63,6 +73,36 @@ class RobotSceneCfg(InteractiveSceneCfg):
     )
     # robots
     robot: ArticulationCfg = ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    cart: ArticulationCfg = ArticulationCfg(
+        prim_path="{ENV_REGEX_NS}/Cart",
+        spawn=sim_utils.UrdfFileCfg(
+            asset_path=str(CART_URDF_PATH),
+            fix_base=False,
+            # Keep the named handles as separate bodies for the constraints.
+            merge_fixed_joints=False,
+            joint_drive=sim_utils.UrdfConverterCfg.JointDriveCfg(
+                target_type="none",
+                gains=sim_utils.UrdfConverterCfg.JointDriveCfg.PDGainsCfg(stiffness=0.0, damping=0.0),
+            ),
+            articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+                enabled_self_collisions=False,
+                solver_position_iteration_count=16,
+                solver_velocity_iteration_count=4,
+            ),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                disable_gravity=False,
+                retain_accelerations=False,
+                linear_damping=0.0,
+                angular_damping=0.0,
+                max_linear_velocity=1000.0,
+                max_angular_velocity=1000.0,
+                max_depenetration_velocity=1.0,
+            ),
+        ),
+        init_state=ArticulationCfg.InitialStateCfg(pos=(0.4, 0.0, 0.71)),
+        # The cart joints (wheel spin and caster yaw) are intentionally passive.
+        actuators={},
+    )
 
     # sensors
     height_scanner = RayCasterCfg(
@@ -145,6 +185,24 @@ class EventCfg:
             "position_range": (1.0, 1.0),
             "velocity_range": (-1.0, 1.0),
         },
+    )
+
+    filter_non_hand_robot_cart_collisions = EventTerm(
+        func=mdp.filter_non_hand_robot_cart_collisions,
+        mode="prestartup",
+        params={"cart_env_ratio": CART_ENV_RATIO},
+    )
+
+    create_hand_cart_constraints = EventTerm(
+        func=mdp.create_hand_cart_constraints,
+        mode="prestartup",
+        params={"cart_env_ratio": CART_ENV_RATIO},
+    )
+
+    reset_cart = EventTerm(
+        func=mdp.reset_cart_root_state,
+        mode="reset",
+        params={"cart_env_ratio": CART_ENV_RATIO},
     )
 
     # interval
