@@ -394,7 +394,7 @@ UNITREE_G1_23DOF_CFG = UnitreeArticulationCfg(
     ],
 )
 
-UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
+UNITREE_G1_29DOF_CART_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
         asset_path=f"robots/g1_description/g1_29dof_rev_1_0_heandless.urdf",
     ),
@@ -409,7 +409,7 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
             ".*_shoulder_pitch_joint": 0.3,
             "left_shoulder_roll_joint": 0.25,
             "right_shoulder_roll_joint": -0.25,
-            ".*_elbow_joint": 0.97,
+            # ".*_elbow_joint": 0.97,
             "left_wrist_roll_joint": 0.15,
             "right_wrist_roll_joint": -0.15,
         },
